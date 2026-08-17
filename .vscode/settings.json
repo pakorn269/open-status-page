@@ -1,0 +1,10 @@
+{
+  // Enable Deno language server only for the supabase/functions directory.
+  // The rest of the project uses the standard Node.js/TypeScript server.
+  "deno.enablePaths": ["supabase/functions"],
+  "deno.lint": true,
+  "deno.unstable": false,
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  }
+}
