@@ -197,6 +197,7 @@ open-status-page/
 │   │   ├── UptimeGrid.tsx           # 90-day calendar uptime grid with service selector
 │   │   ├── IncidentHistory.tsx      # Full incident log with component & impact filters
 │   │   ├── PastIncidents.tsx        # 14-day incident summary with 24h counter badge
+│   │   ├── Footer.tsx               # 9arm community hubs & open-source credits
 │   │   └── AdminPanel.tsx           # Secure incident management portal (/admin)
 │   ├── lib/
 │   │   ├── supabase.ts              # Supabase client
@@ -218,6 +219,18 @@ open-status-page/
 ├── .env.example                     # Environment variable template
 └── DESIGN.md                        # Design system reference
 ```
+
+---
+
+## 🌐 9arm Community & Ecosystem
+
+This status monitor observes **[gateway.9arm.co](https://gateway.9arm.co)**. Special thanks and credits to **นายอาร์ม (9arm)** and the developer community:
+
+- 📺 **YouTube Channel**: [@9arm.](https://www.youtube.com/@9arm.) — Live streams, tech discussions, and supporter perks
+- 🐦 **X (Twitter)**: [@castby9arm](https://x.com/castby9arm) — Tech updates, thoughts, and announcements
+- 👥 **Facebook Group**: [Behind the Scenes with 9arm](https://www.facebook.com/groups/9arm.community/) — Public space for tech discussions & community projects
+- 💬 **Discord Server**: [discord.gg/9arm](https://discord.com/invite/9arm) — Tech community and Membership supporters chat
+- 🌐 **Gateway Portal**: [gateway.9arm.co](https://gateway.9arm.co) — Anthropic-compatible API gateway
 
 ---
 

@@ -6,6 +6,7 @@ import { IncidentHistory } from './components/IncidentHistory';
 import { ComponentList } from './components/ComponentList';
 import { PastIncidents } from './components/PastIncidents';
 import { AdminPanel } from './components/AdminPanel';
+import { Footer } from './components/Footer';
 import { ResponseTimeChart, type PingLog } from './components/ResponseTimeChart';
 import type { ServiceComponent } from './components/ComponentList';
 import type { MonthIncidents } from './components/IncidentHistory';
@@ -409,28 +410,10 @@ function App() {
         )}
 
         {/* Footer */}
-        <div className="mt-16 pt-8 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-3">
-          <p className="text-sm text-gray-400 dark:text-gray-500">
-            {t('common.openSource')} ·{' '}
-            <a
-              href="https://github.com/pakorn269/open-status-page"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-gray-700 dark:hover:text-gray-300 transition-colors underline underline-offset-2"
-            >
-              pakorn269/open-status-page
-            </a>
-          </p>
-
-          {activeTab === 'admin' && (
-            <button
-              onClick={() => setActiveTab('components')}
-              className="text-xs text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
-            >
-              {t('common.exitAdmin')}
-            </button>
-          )}
-        </div>
+        <Footer
+          activeTab={activeTab}
+          onExitAdmin={() => setActiveTab('components')}
+        />
       </div>
     </div>
   );

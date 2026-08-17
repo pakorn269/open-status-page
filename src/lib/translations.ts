@@ -117,6 +117,21 @@ export interface Translations {
     joinBtn: string;
     footerNote: string;
   };
+  footer: {
+    communityTitle: string;
+    communitySubtitle: string;
+    youtube: string;
+    youtubeDesc: string;
+    twitter: string;
+    twitterDesc: string;
+    facebook: string;
+    facebookDesc: string;
+    discord: string;
+    discordDesc: string;
+    gatewaySite: string;
+    gatewaySiteDesc: string;
+    disclaimer: string;
+  };
   admin: {
     authTitle: string;
     authSubtitle: string;
@@ -279,6 +294,21 @@ export const translations: Record<Language, Translations> = {
       joinBtn: 'เข้าร่วมช่อง @gateway9armstatus',
       footerNote: 'ไม่ต้องลงทะเบียนหรือกรอกอีเมล เพียงกดเปิดใน Telegram เพื่อเข้าร่วม',
     },
+    footer: {
+      communityTitle: '9arm Community & แพลตฟอร์มผู้พัฒนา',
+      communitySubtitle: 'เกตเวย์ให้บริการโดย นายอาร์ม (9arm) · ติดตาม ร่วมแลกเปลี่ยน และสนับสนุนผลงานได้ที่',
+      youtube: 'YouTube @9arm.',
+      youtubeDesc: 'ไลฟ์สตรีม เรื่องเล่าไอที และสิทธิประโยชน์สมาชิก',
+      twitter: 'X @castby9arm',
+      twitterDesc: 'อัปเดตข่าวสารไอที สรุปประเด็น และความคิดเห็นด่วน',
+      facebook: 'Behind the Scenes with 9arm',
+      facebookDesc: 'กลุ่มคอมมูนิตี้แลกเปลี่ยนเรื่องเทคโนโลยี',
+      discord: 'Discord Server',
+      discordDesc: 'คอมมูนิตี้แชทและกลุ่มผู้สนับสนุนโปรเจกต์',
+      gatewaySite: 'gateway.9arm.co',
+      gatewaySiteDesc: 'หน้าเว็บไซต์ทางการของ API Gateway',
+      disclaimer: 'สถานะระบบนี้เป็นเครื่องมืออิสระที่จัดทำขึ้นโดยคอมมูนิตี้ (Open Source) เพื่อตรวจสอบการเข้าถึง ไม่ได้ดำเนินการอย่างเป็นทางการโดยตรง',
+    },
     admin: {
       authTitle: 'ระบบจัดการเหตุขัดข้อง (ผู้ดูแลระบบ)',
       authSubtitle: 'ยืนยันตัวตนด้วย Supabase Service Role Key เพื่อจัดการเหตุการณ์',
@@ -438,6 +468,21 @@ export const translations: Record<Language, Translations> = {
       feature3: 'Automated 24/7 broadcast via @th9arm_bot',
       joinBtn: 'Join @gateway9armstatus Channel',
       footerNote: 'No registration or email required. Simply open in Telegram to join.',
+    },
+    footer: {
+      communityTitle: '9arm Community & Ecosystem',
+      communitySubtitle: 'Gateway infrastructure is provided by 9arm · Connect with community hubs & channel projects',
+      youtube: 'YouTube @9arm.',
+      youtubeDesc: 'Live streams, tech chats & channel supporters',
+      twitter: 'X @castby9arm',
+      twitterDesc: 'Tech updates, quick thoughts & commentary',
+      facebook: 'Behind the Scenes with 9arm',
+      facebookDesc: 'Public Facebook group for tech discussions',
+      discord: 'Discord Community',
+      discordDesc: 'Live discussion & member supporters chat',
+      gatewaySite: 'gateway.9arm.co',
+      gatewaySiteDesc: 'Official Anthropic-compatible Gateway portal',
+      disclaimer: 'This status page is an independent open-source community tool and is not directly managed or endorsed by the gateway operator.',
     },
     admin: {
       authTitle: 'Admin Incident Management',
