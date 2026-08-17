@@ -1,6 +1,7 @@
 import React from 'react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
 dayjs.extend(relativeTime);
 
@@ -8,9 +9,15 @@ interface StatusBannerProps {
   status: 'operational' | 'degraded' | 'outage';
   lastRefreshed: Date;
   responseTimeMs?: number;
+  incidentCount24h?: number;
 }
 
-export const StatusBanner: React.FC<StatusBannerProps> = ({ status, lastRefreshed, responseTimeMs }) => {
+export const StatusBanner: React.FC<StatusBannerProps> = ({
+  status,
+  lastRefreshed,
+  responseTimeMs,
+  incidentCount24h = 0,
+}) => {
   const getStatusConfig = () => {
     switch (status) {
       case 'operational':
@@ -59,13 +66,35 @@ export const StatusBanner: React.FC<StatusBannerProps> = ({ status, lastRefreshe
         <span className={`text-[15px] font-semibold ${config.textClass}`}>{config.text}</span>
       </div>
 
-      {/* Right: badges */}
+      {/* Right: badges (Response time + 24h Incident counter + Last checked) */}
       <div className="flex items-center gap-2 flex-wrap">
+        {/* 24-hour incident count indicator */}
+        <span
+          className={`text-xs font-medium px-2.5 py-1 rounded-full flex items-center gap-1.5 transition-colors ${
+            incidentCount24h > 0
+              ? 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+              : `${config.badgeBg} ${config.badgeText}`
+          }`}
+          title={`${incidentCount24h} incident(s) recorded in the past 24 hours`}
+        >
+          {incidentCount24h > 0 ? (
+            <AlertCircle size={12} className="text-amber-600 dark:text-amber-400 shrink-0" />
+          ) : (
+            <CheckCircle2 size={12} className="opacity-75 shrink-0" />
+          )}
+          <span>
+            {incidentCount24h === 0
+              ? '0 incidents in 24h'
+              : `${incidentCount24h} incident${incidentCount24h > 1 ? 's' : ''} in 24h`}
+          </span>
+        </span>
+
         {responseTimeMs !== undefined && (
-          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${config.badgeBg} ${config.badgeText}`}>
+          <span className={`text-xs font-medium px-2.5 py-1 rounded-full font-mono ${config.badgeBg} ${config.badgeText}`}>
             {responseTimeMs}ms
           </span>
         )}
+
         <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${config.badgeBg} ${config.badgeText}`}>
           Checked {dayjs(lastRefreshed).fromNow()}
         </span>

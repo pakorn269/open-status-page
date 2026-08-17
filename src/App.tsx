@@ -5,13 +5,15 @@ import { UptimeGrid } from './components/UptimeGrid';
 import { IncidentHistory } from './components/IncidentHistory';
 import { ComponentList } from './components/ComponentList';
 import { PastIncidents } from './components/PastIncidents';
+import { AdminPanel } from './components/AdminPanel';
+import { ResponseTimeChart, type PingLog } from './components/ResponseTimeChart';
 import type { ServiceComponent } from './components/ComponentList';
 import type { MonthIncidents } from './components/IncidentHistory';
 import type { UptimeDay } from './components/UptimeGrid';
 import { supabase } from './lib/supabase';
 import dayjs from 'dayjs';
 
-type TabType = 'components' | 'incidents' | 'uptime';
+type TabType = 'components' | 'incidents' | 'uptime' | 'admin';
 
 interface AppState {
   overallStatus: 'operational' | 'degraded' | 'outage';
@@ -20,9 +22,17 @@ interface AppState {
   uptimeData: UptimeDay[];
   componentsData: ServiceComponent[];
   incidentData: MonthIncidents[];
+  latencyLogs: PingLog[];
+  incidentCount24h: number;
   uptimePercentage: number;
   loading: boolean;
 }
+
+const MONITORED_SERVICES = [
+  { id: 'gateway-http', name: 'API Gateway (HTTP / Models)' },
+  { id: 'model-qwen', name: 'Model: Qwen 3.8 27B' },
+  { id: 'model-deepseek', name: 'Model: DeepSeek v4 Flash' },
+];
 
 // Skeleton block for loading state
 const SkeletonBlock = ({ className }: { className?: string }) => (
@@ -45,6 +55,11 @@ const LoadingSkeleton = () => (
         <SkeletonBlock className="h-3 w-24" />
         <SkeletonBlock className="h-3 w-12" />
       </div>
+    </div>
+    {/* Chart skeleton */}
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6 shadow-sm space-y-4">
+      <SkeletonBlock className="h-5 w-48" />
+      <SkeletonBlock className="h-36 w-full" />
     </div>
     {/* Past incidents skeleton */}
     <div className="space-y-4 mt-8">
@@ -82,6 +97,7 @@ function App() {
     const path = window.location.pathname;
     if (path === '/uptime') return 'uptime';
     if (path === '/incidents') return 'incidents';
+    if (path === '/admin') return 'admin';
     return 'components';
   });
 
@@ -92,6 +108,8 @@ function App() {
     uptimeData: [],
     componentsData: [],
     incidentData: [],
+    latencyLogs: [],
+    incidentCount24h: 0,
     uptimePercentage: 100,
     loading: true
   });
@@ -107,6 +125,7 @@ function App() {
     let path = '/';
     if (activeTab === 'uptime') path = '/uptime';
     else if (activeTab === 'incidents') path = '/incidents';
+    else if (activeTab === 'admin') path = '/admin';
     if (window.location.pathname !== path) window.history.pushState(null, '', path);
   }, [activeTab]);
 
@@ -116,6 +135,7 @@ function App() {
       const path = window.location.pathname;
       if (path === '/uptime') setActiveTab('uptime');
       else if (path === '/incidents') setActiveTab('incidents');
+      else if (path === '/admin') setActiveTab('admin');
       else setActiveTab('components');
     };
     window.addEventListener('popstate', handlePopState);
@@ -126,29 +146,20 @@ function App() {
     try {
       if (!isSilentRefresh) setState(s => ({ ...s, loading: true }));
 
-      // 1. Latest ping for status banner
+      // 1. Fetch recent pings (up to 20 latest) to determine current status per endpoint
       const { data: statusData, error: statusError } = await supabase
         .from('api_status_logs')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(1);
+        .limit(20);
 
       if (statusError) throw statusError;
 
-      let overallStatus: AppState['overallStatus'] = 'operational';
       let lastRefreshed = new Date();
-      let responseTimeMs: number | undefined;
+      let avgResponseTime: number | undefined;
 
       if (statusData && statusData.length > 0) {
-        const latest = statusData[0];
-        lastRefreshed = new Date(latest.created_at || new Date());
-        responseTimeMs = latest.response_time_ms;
-
-        if (!latest.is_operational) {
-          overallStatus = 'outage';
-        } else if (latest.response_time_ms > 2000 || latest.status_code >= 400) {
-          overallStatus = 'degraded';
-        }
+        lastRefreshed = new Date(statusData[0].created_at || new Date());
       }
 
       // 2. 90-day uptime aggregate
@@ -172,7 +183,72 @@ function App() {
       const operationalDays = validDays.filter(d => d.status === 'operational').length;
       const uptimePercentage = validDays.length > 0 ? (operationalDays / validDays.length) * 100 : 100;
 
-      // 3. Incidents
+      // 3. 24-Hour Latency Logs
+      const since24h = dayjs().subtract(24, 'hour').toISOString();
+      const { data: latencyRows } = await supabase
+        .from('api_status_logs')
+        .select('created_at, response_time_ms, status_code, is_operational, endpoint')
+        .gte('created_at', since24h)
+        .order('created_at', { ascending: true })
+        .limit(500);
+
+      const latencyLogs: PingLog[] = latencyRows || [];
+
+      // 4. Build Multi-Component Status List
+      const componentsData: ServiceComponent[] = MONITORED_SERVICES.map(svc => {
+        // Find most recent log for this endpoint
+        const latestLog = statusData?.find(l => l.endpoint === svc.name) || statusData?.[0];
+
+        let compStatus: ServiceComponent['status'] = 'operational';
+        let compResponseTime = latestLog?.response_time_ms;
+        const isModel = svc.name.toLowerCase().includes('model');
+        const latencyThresholdMs = isModel ? 3500 : 1500;
+
+        if (latestLog) {
+          if (!latestLog.is_operational || latestLog.status_code >= 500) {
+            compStatus = 'major_outage';
+          } else if (latestLog.response_time_ms > latencyThresholdMs || (latestLog.status_code >= 400 && latestLog.status_code !== 401)) {
+            compStatus = 'degraded';
+          }
+        }
+
+        // Calculate specific 24h uptime for this component
+        const compLogs = latencyLogs.filter(l => l.endpoint === svc.name);
+        let compUptime = uptimePercentage;
+        if (compLogs.length > 0) {
+          const compOperational = compLogs.filter(l => l.is_operational && l.status_code < 500).length;
+          compUptime = (compOperational / compLogs.length) * 100;
+        }
+
+        return {
+          id: svc.id,
+          name: svc.name,
+          status: compStatus,
+          uptimeDays,
+          uptimePercentage: compUptime,
+          responseTimeMs: compResponseTime,
+        };
+      });
+
+      // Compute overall system status across all components
+      let overallStatus: AppState['overallStatus'] = 'operational';
+      const hasOutage = componentsData.some(c => c.status === 'major_outage' || c.status === 'partial_outage');
+      const hasDegraded = componentsData.some(c => c.status === 'degraded');
+      const allDown = componentsData.every(c => c.status === 'major_outage');
+
+      if (allDown) {
+        overallStatus = 'outage';
+      } else if (hasOutage || hasDegraded) {
+        overallStatus = 'degraded';
+      }
+
+      // Compute average response time across active endpoints
+      const validTimes = componentsData.map(c => c.responseTimeMs).filter((t): t is number => typeof t === 'number');
+      if (validTimes.length > 0) {
+        avgResponseTime = Math.round(validTimes.reduce((a, b) => a + b, 0) / validTimes.length);
+      }
+
+      // 5. Incidents
       const { data: incidentRows, error: incidentError } = await supabase
         .from('incidents')
         .select('*')
@@ -201,28 +277,24 @@ function App() {
         });
       }
 
+      const twentyFourHoursAgo = dayjs().subtract(24, 'hour');
+      const incidentCount24h = incidentRows
+        ? incidentRows.filter(row => dayjs(row.created_at).isAfter(twentyFourHoursAgo)).length
+        : 0;
+
       const finalIncidentData = Object.keys(incidentsByMonth)
         .sort((a, b) => b.localeCompare(a))
         .map(key => incidentsByMonth[key]);
 
-      const componentsData: ServiceComponent[] = [
-        {
-          id: 'comp1',
-          name: 'gateway.9arm.co',
-          status: overallStatus === 'outage' ? 'major_outage' : overallStatus as ServiceComponent['status'],
-          uptimeDays,
-          uptimePercentage,
-          responseTimeMs,
-        }
-      ];
-
       setState({
         overallStatus,
         lastRefreshed,
-        responseTimeMs,
+        responseTimeMs: avgResponseTime,
         uptimeData: uptimeDays,
         componentsData,
         incidentData: finalIncidentData,
+        latencyLogs,
+        incidentCount24h,
         uptimePercentage,
         loading: false
       });
@@ -232,16 +304,20 @@ function App() {
     }
   };
 
-  const tabs: { key: TabType; label: string }[] = [
+  const tabs: { key: TabType; label: string; badge?: number }[] = [
     { key: 'components', label: 'Current Status' },
-    { key: 'incidents', label: 'Incidents' },
+    { key: 'incidents', label: 'Incidents', badge: state.incidentCount24h > 0 ? state.incidentCount24h : undefined },
     { key: 'uptime', label: 'Uptime' },
+    ...(activeTab === 'admin' ? [{ key: 'admin' as TabType, label: '⚙ Admin' }] : []),
   ];
 
   return (
     <div className="bg-[#f9fafb] dark:bg-[#09090b] text-gray-800 dark:text-gray-100 antialiased min-h-screen transition-colors duration-200">
       <div className="max-w-4xl mx-auto py-12 px-6">
-        <Header isDark={isDark} toggleDark={() => setIsDark(!isDark)} />
+        <Header
+          isDark={isDark}
+          toggleDark={() => setIsDark(!isDark)}
+        />
 
         {/* Tabs */}
         <div className="flex border-b border-gray-200 dark:border-gray-800 mb-8">
@@ -249,14 +325,19 @@ function App() {
             <button
               key={tab.key}
               id={`tab-${tab.key}`}
-              className={`py-3 px-4 text-sm font-medium transition-colors duration-150 -mb-px ${
+              className={`py-3 px-4 text-sm font-medium transition-colors duration-150 -mb-px cursor-pointer flex items-center gap-2 ${
                 activeTab === tab.key
-                  ? 'border-b-2 border-gray-900 dark:border-gray-100 text-gray-900 dark:text-gray-100'
+                  ? 'border-b-2 border-gray-900 dark:border-gray-100 text-gray-900 dark:text-gray-100 font-semibold'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border-b-2 border-transparent'
               }`}
               onClick={() => setActiveTab(tab.key)}
             >
-              {tab.label}
+              <span>{tab.label}</span>
+              {tab.badge !== undefined && (
+                <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[10px] font-bold rounded-full leading-none">
+                  {tab.badge}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -268,7 +349,7 @@ function App() {
           <>
             {activeTab === 'uptime' && (
               <UptimeGrid
-                serviceName="gateway.9arm.co"
+                components={state.componentsData}
                 uptimePercentage={state.uptimePercentage}
                 days={state.uptimeData}
               />
@@ -280,20 +361,38 @@ function App() {
                   status={state.overallStatus}
                   lastRefreshed={state.lastRefreshed}
                   responseTimeMs={state.responseTimeMs}
+                  incidentCount24h={state.incidentCount24h}
                 />
-                <ComponentList components={state.componentsData} />
-                <PastIncidents months={state.incidentData} />
+                <ComponentList
+                  components={state.componentsData}
+                  recentLogs={state.latencyLogs}
+                />
+                <ResponseTimeChart logs={state.latencyLogs} />
+                <PastIncidents
+                  months={state.incidentData}
+                  incidentCount24h={state.incidentCount24h}
+                />
               </>
             )}
 
             {activeTab === 'incidents' && (
-              <IncidentHistory months={state.incidentData} />
+              <IncidentHistory
+                months={state.incidentData}
+                components={state.componentsData}
+              />
+            )}
+
+            {activeTab === 'admin' && (
+              <AdminPanel
+                onIncidentChange={() => fetchUptimeData(true)}
+                supabaseUrl={import.meta.env.VITE_SUPABASE_URL ?? 'https://ssqvojmcrubohsudmrta.supabase.co'}
+              />
             )}
           </>
         )}
 
         {/* Footer */}
-        <div className="mt-16 pt-8 border-t border-gray-200 dark:border-gray-800 flex justify-center">
+        <div className="mt-16 pt-8 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-3">
           <p className="text-sm text-gray-400 dark:text-gray-500">
             Open source ·{' '}
             <a
@@ -305,6 +404,15 @@ function App() {
               pakorn269/open-status-page
             </a>
           </p>
+
+          {activeTab === 'admin' && (
+            <button
+              onClick={() => setActiveTab('components')}
+              className="text-xs text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
+            >
+              ← Exit Admin Mode
+            </button>
+          )}
         </div>
       </div>
     </div>

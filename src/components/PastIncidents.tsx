@@ -4,9 +4,10 @@ import type { MonthIncidents, Incident } from './IncidentHistory';
 
 interface PastIncidentsProps {
   months: MonthIncidents[];
+  incidentCount24h?: number;
 }
 
-export const PastIncidents: React.FC<PastIncidentsProps> = ({ months }) => {
+export const PastIncidents: React.FC<PastIncidentsProps> = ({ months, incidentCount24h = 0 }) => {
   const allIncidents = months.flatMap(m => m.incidents);
 
   const past14Days = Array.from({ length: 14 }).map((_, i) =>
@@ -39,9 +40,24 @@ export const PastIncidents: React.FC<PastIncidentsProps> = ({ months }) => {
 
   return (
     <div className="w-full mt-10">
-      <h3 className="text-[18px] font-semibold text-gray-900 dark:text-gray-100 mb-6">
-        Past Incidents
-      </h3>
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-[18px] font-semibold text-gray-900 dark:text-gray-100">
+          Past Incidents
+        </h3>
+
+        {/* 24h Incident count pill */}
+        <span
+          className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+            incidentCount24h > 0
+              ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+          }`}
+        >
+          {incidentCount24h === 0
+            ? '0 incidents in past 24 hours'
+            : `${incidentCount24h} incident${incidentCount24h > 1 ? 's' : ''} in past 24 hours`}
+        </span>
+      </div>
 
       <div className="flex flex-col gap-6">
         {past14Days.map((day, i) => {

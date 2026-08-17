@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import dayjs from 'dayjs';
-import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCheck } from 'lucide-react';
+import type { ServiceComponent } from './ComponentList';
 
 export interface UptimeDay {
   date: string;
@@ -8,27 +9,73 @@ export interface UptimeDay {
 }
 
 interface UptimeGridProps {
-  serviceName: string;
-  uptimePercentage: number;
+  serviceName?: string;
+  uptimePercentage?: number;
   days: UptimeDay[];
+  components?: ServiceComponent[];
 }
 
-export const UptimeGrid: React.FC<UptimeGridProps> = ({ serviceName, days }) => {
+export const UptimeGrid: React.FC<UptimeGridProps> = ({
+  serviceName = 'gateway.9arm.co',
+  days,
+  components = []
+}) => {
+  // Active component selection
+  const [selectedCompId, setSelectedCompId] = useState<string>(() => {
+    return components.length > 0 ? components[0].id : '';
+  });
+
+  // Page offset: 0 = current 3 months (latest), 1 = previous 3 months, etc.
+  const [pageOffset, setPageOffset] = useState<number>(0);
+  const MAX_PAGE_OFFSET = 3; // Allows navigating up to 1 year back (4 quarters)
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showCopyToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 2500);
+  };
+
+  const copyDayData = (compName: string, day: UptimeDay) => {
+    const payload = {
+      service: compName,
+      date: dayjs(day.date).format('YYYY-MM-DD'),
+      timestamp: day.date,
+      status: day.status,
+    };
+
+    const textToCopy = JSON.stringify(payload, null, 2);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(textToCopy);
+      showCopyToast(`Copied ${compName} uptime (${dayjs(day.date).format('MMM D, YYYY')})`);
+    }
+  };
+
+  // Determine which component's data to display
+  const activeComponent = components.find(c => c.id === selectedCompId) || components[0];
+  const activeServiceName = activeComponent ? activeComponent.name : serviceName;
+  const activeDays = activeComponent?.uptimeDays?.length ? activeComponent.uptimeDays : days;
+
   const getColor = (status: UptimeDay['status']) => {
     switch (status) {
-      case 'operational': return '#76ad2a'; // Atlassian green
-      case 'degraded': return '#d9a92a'; // Atlassian yellow/orange
-      case 'outage': return '#e04343'; // Atlassian red
-      case 'no-data': return '#EAEAEA'; // Atlassian gray
+      case 'operational': return '#76ad2a'; // Green
+      case 'degraded':    return '#d9a92a'; // Yellow
+      case 'outage':      return '#e04343'; // Red
+      case 'maintenance': return '#2c84db'; // Blue
+      case 'no-data':     return '#EAEAEA'; // Gray
+      default:            return '#EAEAEA';
     }
   };
 
   const getStatusText = (status: UptimeDay['status']) => {
     switch (status) {
-      case 'operational': return 'No downtime';
-      case 'degraded': return 'Degraded performance';
-      case 'outage': return 'Major outage';
-      case 'no-data': return 'No data';
+      case 'operational': return 'Operational (100%)';
+      case 'degraded':    return 'Degraded performance';
+      case 'outage':      return 'Major outage';
+      case 'maintenance': return 'Maintenance';
+      case 'no-data':     return 'No data';
+      default:            return 'No data';
     }
   };
 
@@ -40,53 +87,87 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({ serviceName, days }) => 
       if (d.status === 'operational') score += 100;
       else if (d.status === 'degraded') score += 95;
       else if (d.status === 'outage') score += 0;
+      else score += 100;
     });
     return (score / validDays.length).toFixed(2);
   };
 
-  // If no days are provided, fallback safely
-  if (!days || days.length === 0) {
-    return <div>No data available</div>;
-  }
-
-  // Calculate the months to display based on the data range
-  let monthsToDisplay: dayjs.Dayjs[] = [];
-  let currentMonth = dayjs(days[0].date).startOf('month');
-  const lastMonth = dayjs(days[days.length - 1].date).startOf('month');
-
-  while (currentMonth.isBefore(lastMonth) || currentMonth.isSame(lastMonth, 'month')) {
-    monthsToDisplay.push(currentMonth);
-    currentMonth = currentMonth.add(1, 'month');
-  }
-
-  // Force exactly 3 months to fit the 3-column grid design (current month + 2 previous)
-  if (monthsToDisplay.length > 3) {
-    monthsToDisplay = monthsToDisplay.slice(-3);
-  }
+  // Compute 3 months based on pageOffset (oldest to newest for calendar layout)
+  const endMonth = dayjs().startOf('month').subtract(pageOffset * 3, 'month');
+  const monthsToDisplay: dayjs.Dayjs[] = [
+    endMonth.subtract(2, 'month'),
+    endMonth.subtract(1, 'month'),
+    endMonth,
+  ];
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 rounded-sm mb-8 shadow-sm">
-      {/* Header with selector and pagination */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 pb-6">
-        <div className="w-full md:w-72 relative">
-          <div className="flex items-center justify-between border border-gray-300 dark:border-gray-700 rounded-sm px-4 py-2 cursor-pointer hover:border-gray-400 dark:hover:border-gray-600 bg-white dark:bg-gray-900">
-            <span className="text-[15px] font-medium text-gray-800 dark:text-gray-200">{serviceName}</span>
-            <ChevronDown size={18} className="text-gray-500 dark:text-gray-400" />
-          </div>
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 rounded-sm mb-8 shadow-sm relative">
+      {/* Toast feedback notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs font-semibold px-4 py-2 rounded-full shadow-xl flex items-center gap-2 z-50 animate-fade-in">
+          <CheckCheck size={14} className="text-green-400 dark:text-green-600 shrink-0" />
+          <span>{toastMessage}</span>
         </div>
-        
-        <div className="flex items-center gap-4 text-[15px] font-medium text-gray-600 dark:text-gray-400">
-          <button className="p-1 border border-gray-300 dark:border-gray-700 rounded-sm hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400">
+      )}
+
+      {/* Header with component selector and functional pagination */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 pb-6 border-b border-gray-100 dark:border-gray-800">
+        <div className="w-full md:w-80 relative">
+          {components.length > 1 ? (
+            <select
+              value={selectedCompId}
+              onChange={e => setSelectedCompId(e.target.value)}
+              className="w-full text-[14px] font-semibold text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm px-3.5 py-2 cursor-pointer hover:border-gray-400 dark:hover:border-gray-600 focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors"
+              aria-label="Select component to view uptime"
+            >
+              {components.map(comp => (
+                <option key={comp.id} value={comp.id}>
+                  {comp.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="text-[15px] font-semibold text-gray-800 dark:text-gray-200 py-1">
+              {activeServiceName}
+            </div>
+          )}
+        </div>
+
+        {/* Pagination controls */}
+        <div className="flex items-center gap-3 text-[14px] font-medium text-gray-600 dark:text-gray-400">
+          <button
+            onClick={() => setPageOffset(prev => Math.min(prev + 1, MAX_PAGE_OFFSET))}
+            disabled={pageOffset >= MAX_PAGE_OFFSET}
+            className={`p-1.5 border border-gray-300 dark:border-gray-700 rounded-sm transition-colors ${
+              pageOffset >= MAX_PAGE_OFFSET
+                ? 'bg-gray-50 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 cursor-pointer active:scale-95'
+            }`}
+            title="Previous 3 months"
+            aria-label="Previous 3 months"
+          >
             <ChevronLeft size={18} />
           </button>
-          <span className="flex items-center gap-1">
-            <span className="text-gray-900 dark:text-gray-100">{monthsToDisplay[0]?.format('MMMM')}</span>
+
+          <span className="flex items-center gap-1 select-none">
+            <span className="text-gray-900 dark:text-gray-100 font-semibold">{monthsToDisplay[0]?.format('MMMM')}</span>
             <var className="not-italic text-gray-500 dark:text-gray-400">{monthsToDisplay[0]?.format('YYYY')}</var>
-            <span className="mx-1">to</span>
-            <span className="text-gray-900 dark:text-gray-100">{monthsToDisplay[monthsToDisplay.length - 1]?.format('MMMM')}</span>
-            <var className="not-italic text-gray-500 dark:text-gray-400">{monthsToDisplay[monthsToDisplay.length - 1]?.format('YYYY')}</var>
+            <span className="mx-1 text-gray-400 dark:text-gray-500">to</span>
+            <span className="text-gray-900 dark:text-gray-100 font-semibold">{monthsToDisplay[2]?.format('MMMM')}</span>
+            <var className="not-italic text-gray-500 dark:text-gray-400">{monthsToDisplay[2]?.format('YYYY')}</var>
           </span>
-          <button className="p-1 border border-gray-300 dark:border-gray-700 rounded-sm bg-gray-50 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed" disabled>
+
+          <button
+            onClick={() => setPageOffset(prev => Math.max(prev - 1, 0))}
+            disabled={pageOffset === 0}
+            className={`p-1.5 border border-gray-300 dark:border-gray-700 rounded-sm transition-colors ${
+              pageOffset === 0
+                ? 'bg-gray-50 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed'
+                : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 cursor-pointer active:scale-95'
+            }`}
+            title="Next 3 months"
+            aria-label="Next 3 months"
+          >
             <ChevronRight size={18} />
           </button>
         </div>
@@ -97,40 +178,66 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({ serviceName, days }) => 
         {monthsToDisplay.map((month, i) => {
           const daysInMonth = month.daysInMonth();
           const monthDays: UptimeDay[] = [];
-          
+
           for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
             const currentDay = month.date(dayNum);
-            const foundDay = days.find(d => dayjs(d.date).isSame(currentDay, 'day'));
-            monthDays.push(foundDay || { date: currentDay.toISOString(), status: 'no-data' });
+            const isFuture = currentDay.isAfter(dayjs(), 'day');
+
+            if (isFuture) {
+              monthDays.push({ date: currentDay.toISOString(), status: 'no-data' });
+            } else {
+              const foundDay = activeDays?.find(d => dayjs(d.date).isSame(currentDay, 'day'));
+              monthDays.push(foundDay || { date: currentDay.toISOString(), status: 'no-data' });
+            }
           }
 
           return (
             <div key={i} className="flex flex-col">
-              <div className="flex items-baseline gap-3 mb-3 border-b border-gray-100 dark:border-gray-800 pb-2">
-                <h6 className="text-[16px] font-semibold text-gray-900 dark:text-gray-100 m-0">
+              <div className="flex items-baseline justify-between mb-3 border-b border-gray-100 dark:border-gray-800 pb-2">
+                <h6 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100 m-0">
                   {month.format('MMMM')} <var className="not-italic font-normal text-gray-500 dark:text-gray-400">{month.format('YYYY')}</var>
                 </h6>
-                <small className="text-[13px] font-medium text-green-600">{calculateMonthUptime(monthDays)}%</small>
+                <small className="text-[13px] font-semibold text-green-600 dark:text-green-400">
+                  {calculateMonthUptime(monthDays)}%
+                </small>
               </div>
+
+              {/* Day blocks grid */}
               <div className="flex flex-wrap gap-[4px]">
                 {monthDays.map((day, idx) => {
                   const formattedDate = dayjs(day.date).format('MMM D, YYYY');
                   const statusText = getStatusText(day.status);
                   const isNoData = day.status === 'no-data';
+
                   return (
-                    <div 
+                    <div
                       key={idx}
-                      className={`inline-flex ${!isNoData ? 'tooltip cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
-                      title={!isNoData ? `${formattedDate}\n${statusText}` : undefined}
+                      onClick={() => !isNoData && copyDayData(activeServiceName, day)}
+                      className={`inline-flex ${
+                        !isNoData
+                          ? 'tooltip cursor-pointer hover:opacity-75 active:scale-95 transition-all'
+                          : 'opacity-40'
+                      }`}
+                      title={
+                        !isNoData
+                          ? `${activeServiceName}\n${formattedDate}\n${statusText}\n\nClick to copy JSON diagnostic data`
+                          : `${formattedDate}\nNo data recorded`
+                      }
                     >
-                      <svg 
-                        className="day" 
-                        width="32" 
-                        height="32" 
-                        xmlns="http://www.w3.org/2000/svg" 
+                      <svg
+                        className="day"
+                        width="30"
+                        height="30"
+                        xmlns="http://www.w3.org/2000/svg"
                         tabIndex={0}
                       >
-                        <rect width="32" height="32" fill={getColor(day.status)} rx="2"></rect>
+                        <rect
+                          width="30"
+                          height="30"
+                          fill={getColor(day.status)}
+                          rx="3"
+                          className="transition-colors"
+                        />
                       </svg>
                     </div>
                   );

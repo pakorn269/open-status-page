@@ -9,22 +9,37 @@ An open-source, community-run status monitor for **[gateway.9arm.co](https://gat
 ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 ![Built with React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)
 ![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?style=flat-square&logo=supabase)
-![Cloudflare Pages](https://img.shields.io/badge/Cloudflare-Pages-F38020?style=flat-square&logo=cloudflare)
+![Cloudflare](https://img.shields.io/badge/Cloudflare-Workers-F38020?style=flat-square&logo=cloudflare)
+![Telegram Channel](https://img.shields.io/badge/Telegram-@gateway9armstatus-229ED9?style=flat-square&logo=telegram)
+
+<br />
+
+![Open Status Page Preview](./public/open-status-page.sinon-7cf.workers.dev.webp)
 
 ---
 
 ## ✨ Features
 
-- **Animated status banner** — Operational / Degraded / Major Outage with pulsing dot + response time badge
-- **90-day uptime grid** — color-coded calendar blocks with hover tooltips
-- **Incident history** — grouped by month, with impact badges (none / minor / major / critical)
-- **Component status list** — per-service uptime percentage + last response time
-- **Skeleton loader** — shimmer animation while data is fetching
+- **Telegram broadcast channel (Thai)** — instant outage, elevated latency, and recovery notifications via [**@gateway9armstatus**](https://t.me/gateway9armstatus) (powered by `@th9arm_bot`)
+- **"Subscribe to Updates" modal** — one-click Telegram subscription directly from the status header
+- **Multi-endpoint monitoring** — concurrently verifies:
+  1. `API Gateway (HTTP / Models)` — HTTP proxy & model registry (`GET /v1/models`)
+  2. `Model: Qwen 3.8 27B` — inference pipeline on `qwen3.8-27b-fp8` (`POST /v1/messages`)
+  3. `Model: DeepSeek v4 Flash` — inference pipeline on `deepseek-v4-flash-0731` (`POST /v1/messages`)
+- **288-entry granular check grid (Default)** — visualizes all 288 5-minute health check intervals over the past 24 hours to pinpoint exact intraday outage windows
+- **Click-to-Copy diagnostic JSON** — click any health check bar, daily block, or latency point to instantly copy formatted diagnostic JSON data
+- **Multi-color 24h response time chart** — continuous multi-line latency sparkline with individual color coding:
+  - 🔵 **API Gateway** (`#3b82f6`)
+  - 🟣 **Model: Qwen 3.8 27B** (`#8b5cf6`)
+  - 🟡 **Model: DeepSeek v4 Flash** (`#f59e0b`)
+- **24-hour incident indicators** — live counter badges on the status banner, past incidents summary, and notification badge on tabs
+- **Functional pagination** — quarterly 3-month navigation with boundary controls across Uptime and Incident history
+- **Component & Impact filtering** — filter incidents by specific service and severity level (`Critical`, `Major`, `Minor`, `Informational`) with quick reset
+- **Automated incident lifecycle** — auto-creates incidents on hard outages/severe latency and auto-resolves when services normalize
+- **Admin portal (`/admin`)** — post, edit, resolve, and delete incidents directly from the web UI (authenticated via Supabase Service Role Key)
 - **Dark mode** — persisted via `localStorage`, respects OS preference
-- **URL-synced tabs** — `/`, `/incidents`, `/uptime` with browser back/forward support
+- **URL-synced tabs** — `/`, `/incidents`, `/uptime`, `/admin` with browser back/forward support
 - **Auto-refresh** — polls for new data silently every 60 seconds
-- **Automated health checks** — Supabase Edge Function pings the gateway every 5 minutes via `pg_cron + pg_net`
-- **End-to-end health verification** — authenticates and invokes a real model call (`max_tokens: 1`) to confirm the full pipeline is working
 
 ---
 
@@ -39,6 +54,7 @@ An open-source, community-run status monitor for **[gateway.9arm.co](https://gat
 | Backend / DB | Supabase (PostgreSQL + Edge Functions) |
 | Hosting | Cloudflare Workers (static assets) |
 | Date handling | Day.js |
+| Notifications | Telegram Bot API (`@th9arm_bot`) |
 
 ---
 
@@ -78,9 +94,11 @@ Edit `.env` with your values:
 | `SUPABASE_URL` | Your project reference ID (e.g. `abcdefghijklmnop`) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → `service_role` key (**keep secret**) |
 | `ANTHROPIC_AUTH_TOKEN` | The API key used to authenticate health-check pings |
+| `TELEGRAM_BOT_TOKEN` | Bot token from [@BotFather](https://t.me/BotFather) for broadcasting alerts |
+| `TELEGRAM_CHAT_ID` | Telegram Channel username or chat ID (e.g. `@gateway9armstatus`) |
 
-> `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are **public-safe** — they're the anon key protected by Row Level Security and are intentionally hardcoded as fallbacks in `src/lib/supabase.ts` for static asset deployments.
-> Never commit your `service_role` key or `ANTHROPIC_AUTH_TOKEN`.
+> `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are **public-safe** — they're the anon key protected by Row Level Security and are hardcoded as fallbacks in `src/lib/supabase.ts` for static asset deployments.
+> Never commit your `service_role` key, `ANTHROPIC_AUTH_TOKEN`, or `TELEGRAM_BOT_TOKEN`.
 
 ### 4. Set up the Supabase database
 
@@ -96,22 +114,17 @@ Run these SQL files **in order** in the [Supabase SQL Editor](https://supabase.c
 ### 5. Deploy the Edge Function
 
 ```bash
-# Install Supabase CLI
-npm install -g supabase
-
-# Authenticate and link to your project
-supabase login
-supabase link --project-ref YOUR_PROJECT_REF
-
 # Set secrets (these are injected into the Edge Function at runtime)
-supabase secrets set ANTHROPIC_AUTH_TOKEN=your_api_key_here
-supabase secrets set SERVICE_ROLE_KEY=your_service_role_key_here
+npx supabase secrets set ANTHROPIC_AUTH_TOKEN=your_api_key_here --project-ref YOUR_PROJECT_REF
+npx supabase secrets set SERVICE_ROLE_KEY=your_service_role_key_here --project-ref YOUR_PROJECT_REF
+npx supabase secrets set TELEGRAM_BOT_TOKEN=your_telegram_bot_token --project-ref YOUR_PROJECT_REF
+npx supabase secrets set TELEGRAM_CHAT_ID=@gateway9armstatus --project-ref YOUR_PROJECT_REF
 
 # Deploy
-supabase functions deploy health-check
+npx supabase functions deploy health-check --project-ref YOUR_PROJECT_REF
 ```
 
-The Edge Function is scheduled automatically by `pg_cron` to run every 5 minutes. It makes an authenticated POST to `/v1/messages` using your `ANTHROPIC_AUTH_TOKEN` with `max_tokens: 1` to verify the full pipeline end-to-end at near-zero cost.
+The Edge Function is scheduled automatically by `pg_cron` to run every 5 minutes. It concurrently checks all configured endpoints, logs response times, and broadcasts Thai alerts to Telegram on state changes.
 
 ### 6. Run locally
 
@@ -123,10 +136,31 @@ Open [http://localhost:5173](http://localhost:5173).
 
 ---
 
-## ☁️ Deploy to Cloudflare Pages
+## 📢 Telegram Broadcast Alerts
+
+The status page is integrated with Telegram for zero-latency outage notices:
+1. **Public Channel:** Users can join [**@gateway9armstatus**](https://t.me/gateway9armstatus) by clicking **"Subscribe to Updates"** on the header.
+2. **Automated Thai Notifications:**
+   - 🔴 **Outage Detected:** Sends formatted alert specifying which service failed and HTTP status code.
+   - ⚠️ **Elevated Latency:** Alerts if latency exceeds twice normal threshold.
+   - 🟢 **Full Recovery:** Broadcasts a recovery notice with list of resolved services once all checks normalize.
+
+---
+
+## 🛡️ Admin Portal
+
+To manage incidents without touching SQL:
+1. Navigate directly to `/admin` in your browser (e.g. `http://localhost:5173/admin`).
+2. Enter your **Supabase Service Role Key** to unlock the management interface.
+3. Post new incidents, update existing statuses, or click **Resolve** to close active outages.
+4. Active incidents are also automatically closed when all automated health checks recover.
+
+---
+
+## ☁️ Deploy to Cloudflare Workers
 
 1. Push to GitHub
-2. Go to [Cloudflare Pages](https://pages.cloudflare.com/) → **Create a project** → connect your repo
+2. Go to [Cloudflare](https://dash.cloudflare.com/) → **Workers & Pages** → connect your repo
 3. Set the build configuration:
 
 | Setting | Value |
@@ -135,51 +169,11 @@ Open [http://localhost:5173](http://localhost:5173).
 | Build command | `npm run build` |
 | Output directory | `dist` |
 
-4. Add environment variables under **Settings → Environment variables**:
+4. Add environment variables:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
 
-5. Deploy. SPA routing (`/incidents`, `/uptime`) is handled by [`public/_redirects`](public/_redirects) (Cloudflare Workers static assets handle it natively).
-
----
-
-## ⚙️ Customizing for your endpoint
-
-### Change the monitored URL
-
-Edit [`supabase/functions/health-check/index.ts`](supabase/functions/health-check/index.ts):
-
-```ts
-// Change this to your own endpoint
-const response = await fetch("https://your-api-endpoint.com/v1/messages", {
-  method: "POST",
-  headers: {
-    "x-api-key": apiKey,
-    // adjust headers to match your API
-  },
-  body: JSON.stringify({ ... }),
-});
-```
-
-### Change the displayed service name
-
-Edit [`src/App.tsx`](src/App.tsx) — look for `componentsData`:
-
-```ts
-const componentsData: ServiceComponent[] = [
-  {
-    id: 'comp1',
-    name: 'your-service.com',   // ← displayed name
-    ...
-  }
-];
-```
-
-### Add more monitored services
-
-1. Create additional Edge Functions (one per endpoint)
-2. Add a new `cron.schedule` entry in `setup.sql` for each
-3. Extend `componentsData` in `App.tsx` with separate uptime tracking per service
+5. Deploy. SPA routing (`/incidents`, `/uptime`, `/admin`) is handled by [`public/_redirects`](public/_redirects).
 
 ---
 
@@ -190,24 +184,29 @@ open-status-page/
 ├── .vscode/
 │   └── settings.json                # Scopes Deno language server to supabase/functions/
 ├── public/
-│   └── _redirects                   # SPA routing fallback
+│   ├── _redirects                   # SPA routing fallback
+│   ├── open-status-page.sinon-7cf.workers.dev.webp # UI preview screenshot
+│   └── favicon.svg                  # Favicon
 ├── src/
 │   ├── components/
-│   │   ├── Header.tsx               # Logo + GitHub link + dark mode toggle
-│   │   ├── StatusBanner.tsx         # Animated status indicator with response time badge
-│   │   ├── ComponentList.tsx        # Per-service status list + response time
-│   │   ├── UptimeGrid.tsx           # 90-day calendar uptime grid
-│   │   ├── IncidentHistory.tsx      # Full incident log grouped by month
-│   │   └── PastIncidents.tsx        # 14-day incident summary (proper date matching)
+│   │   ├── Header.tsx               # Logo + Subscribe button + GitHub link + dark mode toggle
+│   │   ├── SubscribeModal.tsx       # Telegram subscription modal (@gateway9armstatus)
+│   │   ├── StatusBanner.tsx         # Animated status indicator with 24h incident badge
+│   │   ├── ComponentList.tsx        # Multi-service list + 288-check grid & click-to-copy
+│   │   ├── ResponseTimeChart.tsx    # Multi-color 24h latency chart with endpoint filter tabs
+│   │   ├── UptimeGrid.tsx           # 90-day calendar uptime grid with service selector
+│   │   ├── IncidentHistory.tsx      # Full incident log with component & impact filters
+│   │   ├── PastIncidents.tsx        # 14-day incident summary with 24h counter badge
+│   │   └── AdminPanel.tsx           # Secure incident management portal (/admin)
 │   ├── lib/
-│   │   └── supabase.ts              # Supabase client (public keys hardcoded as fallback)
-│   ├── App.tsx                      # Main app — data fetching, routing, skeleton loader
+│   │   └── supabase.ts              # Supabase client
+│   ├── App.tsx                      # Main app — state orchestration, multi-endpoint sync
 │   ├── index.css                    # Tailwind + Inter font + shimmer/pulse animations
 │   └── main.tsx
 ├── supabase/
 │   ├── functions/
 │   │   └── health-check/
-│   │       ├── index.ts             # Edge Function — authenticated end-to-end ping
+│   │       ├── index.ts             # Parallel multi-endpoint check & Telegram broadcast logic
 │   │       └── deno.json            # Deno compiler config for IDE support
 │   ├── setup.sql                    # incidents table + cron schedule
 │   └── setup_api_logs.sql           # api_status_logs table + 90-day uptime RPC
