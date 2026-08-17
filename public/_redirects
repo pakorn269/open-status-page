@@ -1,1 +1,2 @@
-/* /index.html 200
+# Cloudflare Pages handles SPA routing (404 → index.html) natively for Vite builds.
+# No redirect rules needed here.
