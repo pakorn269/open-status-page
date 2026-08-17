@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@custom-variant dark (&:is(.dark *));
+
+@layer utilities {
+  .tooltip {
+    @apply relative;
+  }
+  
+  .tooltip:hover::after {
+    content: attr(title);
+    @apply absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs py-1 px-2 rounded-sm whitespace-nowrap z-10;
+  }
+}
