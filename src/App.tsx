@@ -11,6 +11,7 @@ import type { ServiceComponent } from './components/ComponentList';
 import type { MonthIncidents } from './components/IncidentHistory';
 import type { UptimeDay } from './components/UptimeGrid';
 import { supabase } from './lib/supabase';
+import { useTranslation } from './lib/i18n';
 import dayjs from 'dayjs';
 
 type TabType = 'components' | 'incidents' | 'uptime' | 'admin';
@@ -162,26 +163,42 @@ function App() {
         lastRefreshed = new Date(statusData[0].created_at || new Date());
       }
 
-      // 2. 90-day uptime aggregate
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_uptime_90_days');
-      if (rpcError) throw rpcError;
+      // 2. Fetch 90-day uptime per component in parallel
+      const uptimeByComponent: Record<string, UptimeDay[]> = {};
+      const { data: defaultRpcData } = await supabase.rpc('get_uptime_90_days');
 
-      let uptimeDays: UptimeDay[] = [];
-      if (rpcData && Array.isArray(rpcData) && rpcData.length > 0) {
-        uptimeDays = rpcData.map((row: any) => ({
+      let defaultUptimeDays: UptimeDay[] = [];
+      if (defaultRpcData && Array.isArray(defaultRpcData) && defaultRpcData.length > 0) {
+        defaultUptimeDays = defaultRpcData.map((row: any) => ({
           date: row.date || dayjs().toISOString(),
-          status: row.status || 'operational'
+          status: row.status || 'operational',
         }));
       } else {
-        uptimeDays = Array.from({ length: 90 }).map((_, i) => ({
+        defaultUptimeDays = Array.from({ length: 90 }).map((_, i) => ({
           date: dayjs().subtract(89 - i, 'day').toISOString(),
-          status: 'no-data'
+          status: 'no-data',
         }));
       }
 
-      const validDays = uptimeDays.filter(d => d.status !== 'no-data');
-      const operationalDays = validDays.filter(d => d.status === 'operational').length;
-      const uptimePercentage = validDays.length > 0 ? (operationalDays / validDays.length) * 100 : 100;
+      await Promise.all(
+        MONITORED_SERVICES.map(async (svc) => {
+          try {
+            const { data } = await supabase.rpc('get_uptime_90_days', { target_endpoint: svc.name });
+            if (data && Array.isArray(data) && data.length > 0) {
+              uptimeByComponent[svc.id] = data.map((row: any) => ({
+                date: row.date || dayjs().toISOString(),
+                status: row.status || 'operational',
+              }));
+            }
+          } catch (e) {
+            console.error(`Failed to fetch 90-day uptime for ${svc.name}:`, e);
+          }
+        })
+      );
+
+      const validDefaultDays = defaultUptimeDays.filter(d => d.status !== 'no-data');
+      const operationalDefaultDays = validDefaultDays.filter(d => d.status === 'operational').length;
+      const uptimePercentage = validDefaultDays.length > 0 ? (operationalDefaultDays / validDefaultDays.length) * 100 : 100;
 
       // 3. 24-Hour Latency Logs
       const since24h = dayjs().subtract(24, 'hour').toISOString();
@@ -212,20 +229,18 @@ function App() {
           }
         }
 
-        // Calculate specific 24h uptime for this component
-        const compLogs = latencyLogs.filter(l => l.endpoint === svc.name);
-        let compUptime = uptimePercentage;
-        if (compLogs.length > 0) {
-          const compOperational = compLogs.filter(l => l.is_operational && l.status_code < 500).length;
-          compUptime = (compOperational / compLogs.length) * 100;
-        }
+        // Component 90-day uptime history
+        const compUptimeDays = uptimeByComponent[svc.id] || defaultUptimeDays;
+        const validCompDays = compUptimeDays.filter(d => d.status !== 'no-data');
+        const operationalCompDays = validCompDays.filter(d => d.status === 'operational').length;
+        const comp90dUptime = validCompDays.length > 0 ? (operationalCompDays / validCompDays.length) * 100 : 100;
 
         return {
           id: svc.id,
           name: svc.name,
           status: compStatus,
-          uptimeDays,
-          uptimePercentage: compUptime,
+          uptimeDays: compUptimeDays,
+          uptimePercentage: comp90dUptime,
           responseTimeMs: compResponseTime,
         };
       });
@@ -264,7 +279,7 @@ function App() {
           const year = date.year();
           const key = `${year}-${date.month()}`;
           if (!incidentsByMonth[key]) {
-            incidentsByMonth[key] = { name: monthName, year, incidents: [] };
+            incidentsByMonth[key] = { name: monthName, year, monthIndex: date.month(), incidents: [] };
           }
           incidentsByMonth[key].incidents.push({
             id: row.id,
@@ -290,7 +305,7 @@ function App() {
         overallStatus,
         lastRefreshed,
         responseTimeMs: avgResponseTime,
-        uptimeData: uptimeDays,
+        uptimeData: defaultUptimeDays,
         componentsData,
         incidentData: finalIncidentData,
         latencyLogs,
@@ -304,11 +319,13 @@ function App() {
     }
   };
 
+  const { t } = useTranslation();
+
   const tabs: { key: TabType; label: string; badge?: number }[] = [
-    { key: 'components', label: 'Current Status' },
-    { key: 'incidents', label: 'Incidents', badge: state.incidentCount24h > 0 ? state.incidentCount24h : undefined },
-    { key: 'uptime', label: 'Uptime' },
-    ...(activeTab === 'admin' ? [{ key: 'admin' as TabType, label: '⚙ Admin' }] : []),
+    { key: 'components', label: t('tabs.currentStatus') },
+    { key: 'incidents', label: t('tabs.incidents'), badge: state.incidentCount24h > 0 ? state.incidentCount24h : undefined },
+    { key: 'uptime', label: t('tabs.uptime') },
+    ...(activeTab === 'admin' ? [{ key: 'admin' as TabType, label: t('tabs.admin') }] : []),
   ];
 
   return (
@@ -394,7 +411,7 @@ function App() {
         {/* Footer */}
         <div className="mt-16 pt-8 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-3">
           <p className="text-sm text-gray-400 dark:text-gray-500">
-            Open source ·{' '}
+            {t('common.openSource')} ·{' '}
             <a
               href="https://github.com/pakorn269/open-status-page"
               target="_blank"
@@ -410,7 +427,7 @@ function App() {
               onClick={() => setActiveTab('components')}
               className="text-xs text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
             >
-              ← Exit Admin Mode
+              {t('common.exitAdmin')}
             </button>
           )}
         </div>

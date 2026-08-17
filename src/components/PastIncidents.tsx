@@ -1,6 +1,8 @@
 import React from 'react';
 import dayjs from 'dayjs';
 import type { MonthIncidents, Incident } from './IncidentHistory';
+import { useTranslation } from '../lib/i18n';
+import { translateIncidentTitle, translateIncidentMessage, formatIncidentTimestamp } from '../lib/incidentTranslator';
 
 interface PastIncidentsProps {
   months: MonthIncidents[];
@@ -8,6 +10,7 @@ interface PastIncidentsProps {
 }
 
 export const PastIncidents: React.FC<PastIncidentsProps> = ({ months, incidentCount24h = 0 }) => {
+  const { t, language } = useTranslation();
   const allIncidents = months.flatMap(m => m.incidents);
 
   const past14Days = Array.from({ length: 14 }).map((_, i) =>
@@ -32,6 +35,15 @@ export const PastIncidents: React.FC<PastIncidentsProps> = ({ months, incidentCo
     }
   };
 
+  const getImpactLabel = (impact: Incident['impact']) => {
+    switch (impact) {
+      case 'none':     return t('incidentHistory.impactNone');
+      case 'minor':    return t('incidentHistory.impactMinor');
+      case 'major':    return t('incidentHistory.impactMajor');
+      case 'critical': return t('incidentHistory.impactCritical');
+    }
+  };
+
   // Proper date comparison using dayjs isSame — no fragile string matching
   const isIncidentOnDay = (incident: Incident, day: dayjs.Dayjs): boolean => {
     const source = incident.createdAt || incident.timestamp;
@@ -42,20 +54,20 @@ export const PastIncidents: React.FC<PastIncidentsProps> = ({ months, incidentCo
     <div className="w-full mt-10">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-[18px] font-semibold text-gray-900 dark:text-gray-100">
-          Past Incidents
+          {t('pastIncidents.title')}
         </h3>
 
         {/* 24h Incident count pill */}
         <span
           className={`text-xs font-medium px-2.5 py-1 rounded-full ${
             incidentCount24h > 0
-              ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900'
+              ? 'bg-amber-100 dark:amber-950 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900'
               : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
           }`}
         >
           {incidentCount24h === 0
-            ? '0 incidents in past 24 hours'
-            : `${incidentCount24h} incident${incidentCount24h > 1 ? 's' : ''} in past 24 hours`}
+            ? t('pastIncidents.zeroIncidents24h')
+            : t('pastIncidents.incidentsCount24h', { count: incidentCount24h, s: incidentCount24h > 1 ? 's' : '' })}
         </span>
       </div>
 
@@ -66,28 +78,30 @@ export const PastIncidents: React.FC<PastIncidentsProps> = ({ months, incidentCo
           return (
             <div key={i} className="flex flex-col">
               <h4 className="text-[13px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide border-b border-gray-200 dark:border-gray-800 pb-2 mb-3">
-                {day.format('MMM D, YYYY')}
+                {day.locale(language).format(language === 'th' ? 'D MMMM YYYY' : 'MMM D, YYYY')}
               </h4>
 
               {dayIncidents.length === 0 ? (
-                <p className="text-[14px] text-gray-400 dark:text-gray-500 italic">No incidents reported.</p>
+                <p className="text-[14px] text-gray-400 dark:text-gray-500 italic">
+                  {t('pastIncidents.noIncidentsReported')}
+                </p>
               ) : (
                 <div className="flex flex-col gap-4">
                   {dayIncidents.map(incident => (
                     <div key={incident.id} className="flex flex-col gap-1 pl-3 border-l-2 border-gray-200 dark:border-gray-700">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`text-[14px] font-medium ${getImpactColor(incident.impact)}`}>
-                          {incident.name}
+                          {translateIncidentTitle(incident.name, language)}
                         </span>
                         <span className={`text-[11px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${getImpactBadge(incident.impact)}`}>
-                          {incident.impact}
+                          {getImpactLabel(incident.impact)}
                         </span>
                       </div>
                       <div className="text-[14px] text-gray-700 dark:text-gray-300">
-                        {incident.message}
+                        {translateIncidentMessage(incident.message, language)}
                       </div>
                       <div className="text-[12px] text-gray-400 dark:text-gray-500">
-                        {incident.timestamp}
+                        {formatIncidentTimestamp(incident.createdAt || incident.timestamp, language)}
                       </div>
                     </div>
                   ))}
@@ -108,7 +122,7 @@ export const PastIncidents: React.FC<PastIncidentsProps> = ({ months, incidentCo
           }}
           className="text-[14px] font-medium text-blue-600 dark:text-blue-500 hover:text-blue-800 dark:hover:text-blue-400 flex items-center gap-1 transition-colors"
         >
-          ← View full incident history
+          {t('pastIncidents.viewFullHistory')}
         </a>
       </div>
     </div>

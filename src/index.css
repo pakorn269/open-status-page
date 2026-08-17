@@ -1,11 +1,12 @@
 @import "tailwindcss";
 @custom-variant dark (&:is(.dark *));
 
-/* Inter as the base font */
+/* Inter + Noto Sans Thai as the base font */
 @layer base {
   html {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', 'Noto Sans Thai', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 }
 

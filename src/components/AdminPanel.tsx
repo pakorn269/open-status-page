@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Lock, Plus, Trash2, Edit2, CheckCircle2, Key, RefreshCw, X, ShieldAlert } from 'lucide-react';
 import dayjs from 'dayjs';
+import { useTranslation } from '../lib/i18n';
+import { translateIncidentTitle, translateIncidentMessage } from '../lib/incidentTranslator';
 
 interface IncidentRow {
   id: string;
@@ -18,6 +20,7 @@ interface AdminPanelProps {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supabaseUrl }) => {
+  const { t, language } = useTranslation();
   const [adminKey, setAdminKey] = useState<string>(() => {
     return localStorage.getItem('statuspage_admin_key') || '';
   });
@@ -37,11 +40,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
   const [isResolved, setIsResolved] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  const getAdminClient = (keyToUse = adminKey) => {
+  const getAdminClient = useCallback((keyToUse = adminKey) => {
     return createClient(supabaseUrl, keyToUse);
-  };
+  }, [adminKey, supabaseUrl]);
 
-  const fetchAdminIncidents = async (keyToUse = adminKey) => {
+  const fetchAdminIncidents = useCallback(async (keyToUse = adminKey) => {
     if (!keyToUse) return;
     setLoading(true);
     setError(null);
@@ -60,13 +63,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
     } finally {
       setLoading(false);
     }
-  };
+  }, [adminKey, getAdminClient]);
 
   useEffect(() => {
     if (adminKey) {
       fetchAdminIncidents(adminKey);
     }
-  }, [adminKey]);
+  }, [adminKey, fetchAdminIncidents]);
 
   const handleSaveKey = (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,7 +107,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
   const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim() || !formMessage.trim()) {
-      setError('Please fill in both the title and the message.');
+      setError(t('admin.fillRequiredAlert'));
       return;
     }
 
@@ -128,7 +131,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
           .eq('id', editingId);
 
         if (updateErr) throw updateErr;
-        setSuccessMsg('Incident updated successfully.');
+        setSuccessMsg(t('admin.updateSuccessAlert'));
       } else {
         // Create new
         const { error: insertErr } = await client
@@ -143,7 +146,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
           ]);
 
         if (insertErr) throw insertErr;
-        setSuccessMsg('New incident posted successfully.');
+        setSuccessMsg(t('admin.postSuccessAlert'));
       }
 
       setIsFormOpen(false);
@@ -158,7 +161,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
   };
 
   const handleQuickResolve = async (inc: IncidentRow) => {
-    if (!window.confirm(`Mark "${inc.name}" as resolved?`)) return;
+    if (!window.confirm(t('admin.confirmResolve', { name: inc.name }))) return;
 
     setError(null);
     try {
@@ -167,12 +170,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
         .from('incidents')
         .update({
           resolved_at: new Date().toISOString(),
-          message: `${inc.message} — This incident has been resolved.`,
+          message: `${inc.message} — Resolved.`,
         })
         .eq('id', inc.id);
 
       if (resolveErr) throw resolveErr;
-      setSuccessMsg(`Incident "${inc.name}" marked as resolved.`);
+      setSuccessMsg(t('admin.resolveSuccessAlert', { name: inc.name }));
       await fetchAdminIncidents();
       onIncidentChange();
     } catch (err: any) {
@@ -181,7 +184,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!window.confirm(`Are you sure you want to permanently delete "${name}"?`)) return;
+    if (!window.confirm(t('admin.confirmDelete', { name }))) return;
 
     setError(null);
     try {
@@ -192,7 +195,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
         .eq('id', id);
 
       if (deleteErr) throw deleteErr;
-      setSuccessMsg(`Incident "${name}" deleted.`);
+      setSuccessMsg(t('admin.deleteSuccessAlert', { name }));
       await fetchAdminIncidents();
       onIncidentChange();
     } catch (err: any) {
@@ -209,6 +212,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
     }
   };
 
+  const getImpactLabel = (impact: IncidentRow['impact']) => {
+    switch (impact) {
+      case 'none':     return t('admin.impactOptionNone');
+      case 'minor':    return t('admin.impactOptionMinor');
+      case 'major':    return t('admin.impactOptionMajor');
+      case 'critical': return t('admin.impactOptionCritical');
+    }
+  };
+
   // If no admin key set, show authentication gate
   if (!adminKey) {
     return (
@@ -218,15 +230,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
             <Lock size={24} />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Admin Incident Management</h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Authenticate with your Supabase Service Role Key to manage incidents.</p>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{t('admin.authTitle')}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.authSubtitle')}</p>
           </div>
         </div>
 
         <form onSubmit={handleSaveKey} className="space-y-4 mt-6">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1.5">
-              Supabase Service Role Key
+              {t('admin.serviceKeyLabel')}
             </label>
             <div className="relative">
               <input
@@ -240,7 +252,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
               <Key size={16} className="absolute right-3 top-3 text-gray-400 pointer-events-none" />
             </div>
             <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5">
-              Found in: Supabase Dashboard → Project Settings → API → `service_role` secret.
+              {t('admin.serviceKeyHint')}
             </p>
           </div>
 
@@ -248,7 +260,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
             type="submit"
             className="w-full bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-semibold py-2.5 rounded-md hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors shadow-sm cursor-pointer"
           >
-            Unlock Admin Panel
+            {t('admin.unlockBtn')}
           </button>
         </form>
       </div>
@@ -262,10 +274,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
         <div>
           <div className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-green-500 inline-block" />
-            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Incident Administration</h3>
+            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t('admin.panelTitle')}</h3>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Post status updates, manage active outages, and record resolutions.
+            {t('admin.panelSubtitle')}
           </p>
         </div>
 
@@ -275,15 +287,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
             className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-md shadow-sm transition-colors cursor-pointer"
           >
             <Plus size={15} />
-            Post New Incident
+            {t('admin.postNewBtn')}
           </button>
 
           <button
             onClick={() => fetchAdminIncidents()}
             disabled={loading}
             className="p-2 border border-gray-300 dark:border-gray-700 rounded-md text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-            title="Refresh list"
-            aria-label="Refresh incidents list"
+            title={t('admin.refreshList')}
+            aria-label={t('admin.refreshList')}
           >
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
@@ -291,9 +303,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
           <button
             onClick={handleClearKey}
             className="text-xs text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 border border-gray-200 dark:border-gray-800 hover:border-red-200 dark:hover:border-red-900 px-3 py-2 rounded-md transition-colors cursor-pointer"
-            title="Log out from admin"
+            title={t('admin.lockBtn')}
           >
-            Lock
+            {t('admin.lockBtn')}
           </button>
         </div>
       </div>
@@ -319,12 +331,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
           <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-100 dark:border-gray-800">
             <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               {editingId ? <Edit2 size={16} /> : <Plus size={16} />}
-              {editingId ? 'Edit Incident' : 'Post New Incident'}
+              {editingId ? t('admin.editIncident') : t('admin.postIncident')}
             </h4>
             <button
               onClick={() => setIsFormOpen(false)}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 cursor-pointer"
-              aria-label="Close form"
+              aria-label={t('common.close')}
             >
               <X size={18} />
             </button>
@@ -333,13 +345,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
           <form onSubmit={handleSubmitForm} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                Incident Title
+                {t('admin.incidentTitleLabel')}
               </label>
               <input
                 type="text"
                 value={formName}
                 onChange={e => setFormName(e.target.value)}
-                placeholder="e.g. Elevated latency on gateway.9arm.co"
+                placeholder={t('admin.incidentTitlePlaceholder')}
                 className="w-full text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
@@ -348,17 +360,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                  Impact Level
+                  {t('admin.impactLabel')}
                 </label>
                 <select
                   value={formImpact}
                   onChange={e => setFormImpact(e.target.value as any)}
                   className="w-full text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 >
-                  <option value="none">None / Informational</option>
-                  <option value="minor">Minor (Yellow)</option>
-                  <option value="major">Major (Orange)</option>
-                  <option value="critical">Critical (Red)</option>
+                  <option value="none">{t('admin.impactOptionNone')}</option>
+                  <option value="minor">{t('admin.impactOptionMinor')}</option>
+                  <option value="major">{t('admin.impactOptionMajor')}</option>
+                  <option value="critical">{t('admin.impactOptionCritical')}</option>
                 </select>
               </div>
 
@@ -370,19 +382,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
                     onChange={e => setIsResolved(e.target.checked)}
                     className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <span>Mark as Resolved</span>
+                  <span>{t('admin.markResolved')}</span>
                 </label>
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                Status Message / Update
+                {t('admin.messageLabel')}
               </label>
               <textarea
                 value={formMessage}
                 onChange={e => setFormMessage(e.target.value)}
-                placeholder="Describe what happened, current investigations, or the resolution details..."
+                placeholder={t('admin.messagePlaceholder')}
                 rows={3}
                 className="w-full text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
@@ -395,14 +407,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
                 onClick={() => setIsFormOpen(false)}
                 className="px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors cursor-pointer"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
                 disabled={submitting}
                 className="px-4 py-2 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors shadow-sm cursor-pointer disabled:opacity-50"
               >
-                {submitting ? 'Saving...' : editingId ? 'Update Incident' : 'Publish Incident'}
+                {submitting ? t('common.saving') : editingId ? t('admin.updateBtn') : t('admin.publishBtn')}
               </button>
             </div>
           </form>
@@ -413,13 +425,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden shadow-sm">
         <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 flex justify-between items-center">
           <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Recorded Incidents ({incidents.length})
+            {t('admin.recordedIncidents', { count: incidents.length })}
           </span>
         </div>
 
         {incidents.length === 0 ? (
           <div className="p-8 text-center text-gray-400 dark:text-gray-500 text-sm italic">
-            No incidents found in database. Click "Post New Incident" to create one.
+            {t('admin.emptyIncidents')}
           </div>
         ) : (
           <div className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -428,30 +440,30 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
                 <div className="space-y-1.5 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      {inc.name}
+                      {translateIncidentTitle(inc.name, language)}
                     </span>
                     <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded ${getImpactBadge(inc.impact)}`}>
-                      {inc.impact}
+                      {getImpactLabel(inc.impact)}
                     </span>
                     {inc.resolved_at ? (
                       <span className="text-[10px] font-medium bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-900 px-2 py-0.5 rounded">
-                        Resolved
+                        {t('admin.statusResolved')}
                       </span>
                     ) : (
                       <span className="text-[10px] font-medium bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900 px-2 py-0.5 rounded">
-                        Active
+                        {t('admin.statusActive')}
                       </span>
                     )}
                   </div>
 
                   <p className="text-xs text-gray-600 dark:text-gray-300">
-                    {inc.message}
+                    {translateIncidentMessage(inc.message, language)}
                   </p>
 
                   <div className="text-[11px] text-gray-400 dark:text-gray-500 flex gap-3 flex-wrap">
-                    <span>Created: {dayjs(inc.created_at).format('MMM D, YYYY HH:mm')}</span>
+                    <span>{t('admin.createdPrefix')} {dayjs(inc.created_at).format('MMM D, YYYY HH:mm')}</span>
                     {inc.resolved_at && (
-                      <span>Resolved: {dayjs(inc.resolved_at).format('MMM D, YYYY HH:mm')}</span>
+                      <span>{t('admin.resolvedPrefix')} {dayjs(inc.resolved_at).format('MMM D, YYYY HH:mm')}</span>
                     )}
                   </div>
                 </div>
@@ -462,18 +474,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
                     <button
                       onClick={() => handleQuickResolve(inc)}
                       className="text-xs text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/60 border border-green-200 dark:border-green-900 px-2.5 py-1.5 rounded transition-colors flex items-center gap-1 cursor-pointer"
-                      title="Resolve Incident"
+                      title={t('admin.resolveBtn')}
                     >
                       <CheckCircle2 size={13} />
-                      Resolve
+                      {t('admin.resolveBtn')}
                     </button>
                   )}
 
                   <button
                     onClick={() => openEditForm(inc)}
                     className="p-1.5 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors cursor-pointer"
-                    title="Edit Incident"
-                    aria-label="Edit Incident"
+                    title={t('admin.editBtn')}
+                    aria-label={t('admin.editBtn')}
                   >
                     <Edit2 size={14} />
                   </button>
@@ -481,8 +493,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onIncidentChange, supaba
                   <button
                     onClick={() => handleDelete(inc.id, inc.name)}
                     className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 rounded transition-colors cursor-pointer"
-                    title="Delete Incident"
-                    aria-label="Delete Incident"
+                    title={t('admin.deleteBtn')}
+                    aria-label={t('admin.deleteBtn')}
                   >
                     <Trash2 size={14} />
                   </button>

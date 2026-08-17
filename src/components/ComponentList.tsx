@@ -3,6 +3,7 @@ import { Check, Minus, AlertTriangle, X, Wrench, Clock, Calendar, CheckCheck } f
 import dayjs from 'dayjs';
 import type { UptimeDay } from './UptimeGrid';
 import type { PingLog } from './ResponseTimeChart';
+import { useTranslation } from '../lib/i18n';
 
 export interface ServiceComponent {
   id: string;
@@ -26,6 +27,7 @@ interface CheckEntry {
 }
 
 export const ComponentList: React.FC<ComponentListProps> = ({ components, recentLogs = [] }) => {
+  const { t } = useTranslation();
   // Default to '288' entries view mode as requested
   const [viewMode, setViewMode] = useState<'288' | '90d'>('288');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -50,7 +52,7 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
     const textToCopy = JSON.stringify(payload, null, 2);
     if (navigator.clipboard) {
       navigator.clipboard.writeText(textToCopy);
-      showCopyToast(`Copied ${compName} data (${dayjs(entry.date).format('MMM D, HH:mm')})`);
+      showCopyToast(t('componentList.copiedComponentData', { name: compName, time: dayjs(entry.date).format('MMM D, HH:mm') }));
     }
   };
 
@@ -67,11 +69,11 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
 
   const getComponentStatusText = (status: ServiceComponent['status']) => {
     switch (status) {
-      case 'operational':    return 'Operational';
-      case 'degraded':       return 'Degraded Performance';
-      case 'partial_outage': return 'Partial Outage';
-      case 'major_outage':   return 'Major Outage';
-      case 'maintenance':    return 'Under Maintenance';
+      case 'operational':    return t('componentList.operational');
+      case 'degraded':       return t('componentList.degraded');
+      case 'partial_outage': return t('componentList.partialOutage');
+      case 'major_outage':   return t('componentList.majorOutage');
+      case 'maintenance':    return t('componentList.maintenance');
     }
   };
 
@@ -159,12 +161,12 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
         <div className="text-[13px] text-gray-500 dark:text-gray-400">
           {viewMode === '288' ? (
             <span>
-              Showing the last <var className="font-semibold not-italic text-gray-700 dark:text-gray-300">288</var> health checks (~24 hours).{' '}
-              <span className="text-gray-400 dark:text-gray-500 text-[11px]">(Click any bar to copy diagnostic data)</span>
+              {t('componentList.showingChecks', { count: 288 })}{' '}
+              <span className="text-gray-400 dark:text-gray-500 text-[11px]">{t('componentList.clickToCopyDiagnostic')}</span>
             </span>
           ) : (
             <span>
-              Uptime over the past <var className="font-semibold not-italic text-gray-700 dark:text-gray-300">90</var> days.{' '}
+              {t('componentList.uptimeOverDays', { days: 90 })}{' '}
               <a
                 href="/uptime"
                 className="text-gray-500 dark:text-gray-400 underline hover:text-gray-800 dark:hover:text-gray-200"
@@ -174,7 +176,7 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
                   window.dispatchEvent(new Event('popstate'));
                 }}
               >
-                View historical uptime.
+                {t('componentList.viewHistoricalUptime')}
               </a>
             </span>
           )}
@@ -191,7 +193,7 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
             }`}
           >
             <Clock size={12} />
-            <span>Last 288 entries (24h)</span>
+            <span>{t('componentList.last288Checks')}</span>
           </button>
 
           <button
@@ -203,7 +205,7 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
             }`}
           >
             <Calendar size={12} />
-            <span>Past 90 days</span>
+            <span>{t('componentList.past90Days')}</span>
           </button>
         </div>
       </div>
@@ -238,8 +240,8 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
                     {compEntries.map((entry, entryIdx) => {
                       const hasData = entry.status !== 'no-data';
                       const tooltipText = hasData
-                        ? `${comp.name}\n${dayjs(entry.date).format('MMM D, HH:mm:ss')}\n${entry.responseTimeMs}ms · HTTP ${entry.statusCode} (${entry.status})\n\nClick to copy JSON diagnostic data`
-                        : `${comp.name}\n${dayjs(entry.date).format('MMM D, HH:mm')}\nNo ping recorded`;
+                        ? `${comp.name}\n${dayjs(entry.date).format('MMM D, HH:mm:ss')}\n${entry.responseTimeMs}ms · HTTP ${entry.statusCode} (${entry.status})\n\n${t('uptimeGrid.clickToCopyDiagnostic')}`
+                        : `${comp.name}\n${dayjs(entry.date).format('MMM D, HH:mm')}\n${t('componentList.noPingRecorded')}`;
 
                       return (
                         <div
@@ -262,11 +264,11 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
 
                   {/* Inline 24h Legend */}
                   <div className="flex justify-between items-center text-[12px] text-gray-400 dark:text-gray-500 mt-2">
-                    <span>24 hours ago</span>
+                    <span>{t('componentList.twentyFourHoursAgo')}</span>
                     <span className="text-gray-600 dark:text-gray-300 font-medium font-mono">
-                      {uptime24h}% uptime (288 checks)
+                      {t('componentList.uptime288Summary', { pct: uptime24h })}
                     </span>
-                    <span>Now</span>
+                    <span>{t('common.now')}</span>
                   </div>
                 </div>
               )}
@@ -291,18 +293,18 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
                         onClick={() => copyCheckData(comp.name, day)}
                         className="hover:opacity-75 cursor-pointer transition-opacity"
                       >
-                        <title>{`${comp.name}\n${dayjs(day.date).format('MMM D, YYYY')}\n${day.status}\n\nClick to copy JSON diagnostic data`}</title>
+                        <title>{`${comp.name}\n${dayjs(day.date).format('MMM D, YYYY')}\n${day.status}\n\n${t('uptimeGrid.clickToCopyDiagnostic')}`}</title>
                       </rect>
                     ))}
                   </svg>
 
                   {/* Inline 90d Legend */}
                   <div className="flex justify-between items-center text-[12px] text-gray-400 dark:text-gray-500 mt-2">
-                    <span>90 days ago</span>
+                    <span>{t('componentList.ninetyDaysAgo')}</span>
                     <span className="text-gray-600 dark:text-gray-300 font-medium font-mono">
-                      {comp.uptimePercentage.toFixed(2)}% uptime
+                      {t('componentList.uptime90Summary', { pct: comp.uptimePercentage.toFixed(2) })}
                     </span>
-                    <span>Today</span>
+                    <span>{t('common.today')}</span>
                   </div>
                 </div>
               )}
@@ -314,16 +316,16 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
       {/* Footer Legend */}
       <div className="flex flex-wrap items-center gap-6 text-[13px] text-gray-600 dark:text-gray-400 mb-10 pt-1">
         <div className="flex items-center gap-2">
-          <Check className="w-4 h-4 text-[#76ad2a]" /> Operational
+          <Check className="w-4 h-4 text-[#76ad2a]" /> {t('componentList.operational')}
         </div>
         <div className="flex items-center gap-2">
-          <Minus className="w-4 h-4 text-[#d9a92a]" /> Degraded Performance
+          <Minus className="w-4 h-4 text-[#d9a92a]" /> {t('componentList.degraded')}
         </div>
         <div className="flex items-center gap-2">
-          <X className="w-4 h-4 text-[#e04343]" /> Major Outage
+          <X className="w-4 h-4 text-[#e04343]" /> {t('componentList.majorOutage')}
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3.5 h-3.5 rounded-xs bg-[#d1d5db] dark:bg-gray-700 inline-block" /> No Data
+          <div className="w-3.5 h-3.5 rounded-xs bg-[#d1d5db] dark:bg-gray-700 inline-block" /> {t('componentList.noData')}
         </div>
       </div>
     </div>

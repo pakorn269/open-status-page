@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import dayjs from 'dayjs';
 import { Activity, AlertCircle, CheckCheck } from 'lucide-react';
+import { useTranslation } from '../lib/i18n';
 
 export interface PingLog {
   created_at: string;
@@ -77,6 +78,7 @@ const getEndpointColor = (name: string, index = 0): EndpointColor => {
 };
 
 export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({ logs, loading = false }) => {
+  const { t } = useTranslation();
   const [selectedEndpoint, setSelectedEndpoint] = useState<string>('all');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [hoveredPoint, setHoveredPoint] = useState<{
@@ -106,7 +108,7 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({ logs, load
     const textToCopy = JSON.stringify(payload, null, 2);
     if (navigator.clipboard) {
       navigator.clipboard.writeText(textToCopy);
-      showCopyToast(`Copied latency data (${log.response_time_ms}ms at ${dayjs(log.created_at).format('HH:mm:ss')})`);
+      showCopyToast(t('chart.copiedLatency', { ms: log.response_time_ms, time: dayjs(log.created_at).format('HH:mm:ss') }));
     }
   };
 
@@ -240,10 +242,10 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({ logs, load
           </div>
           <div>
             <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-              Response Time & Latency (24h)
+              {t('chart.title')}
             </h3>
             <p className="text-[11px] text-gray-400 dark:text-gray-500">
-              Continuous multi-service latency measurements · (Click any point to copy)
+              {t('chart.subtitle')}
             </p>
           </div>
         </div>
@@ -278,7 +280,7 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({ logs, load
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
           >
-            <span>All Endpoints (Multi-line)</span>
+            <span>{t('chart.allEndpoints')}</span>
           </button>
 
           {availableEndpoints.map((ep, i) => {
@@ -307,7 +309,7 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({ logs, load
       {logs.length === 0 ? (
         <div className="h-36 flex flex-col justify-center items-center text-gray-400 dark:text-gray-500 text-xs italic">
           <AlertCircle size={20} className="mb-1 text-gray-300 dark:text-gray-600" />
-          No latency measurements recorded in the last 24 hours.
+          {t('chart.noData24h')}
         </div>
       ) : (
         <div className="relative w-full overflow-hidden">
@@ -426,13 +428,13 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({ logs, load
             {/* X-axis time labels */}
             <g className="text-[10px] fill-gray-400 dark:fill-gray-500">
               <text x={padding.left} y={chartHeight - 4} textAnchor="start">
-                24h ago
+                {t('chart.hoursAgo24')}
               </text>
               <text x={padding.left + innerWidth / 2} y={chartHeight - 4} textAnchor="middle">
-                12h ago
+                {t('chart.hoursAgo12')}
               </text>
               <text x={padding.left + innerWidth} y={chartHeight - 4} textAnchor="end">
-                Now
+                {t('chart.now')}
               </text>
             </g>
           </svg>
@@ -461,7 +463,7 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({ logs, load
                 {hoveredPoint.endpoint}
               </div>
               <div className="text-[10px] text-gray-400 whitespace-nowrap mt-1">
-                {dayjs(hoveredPoint.log.created_at).format('MMM D, HH:mm:ss')} · Click to copy
+                {dayjs(hoveredPoint.log.created_at).format('MMM D, HH:mm:ss')} · {t('chart.clickToCopy')}
               </div>
             </div>
           )}

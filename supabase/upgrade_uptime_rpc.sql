@@ -1,24 +1,5 @@
--- 1. Create api_status_logs Table
-CREATE TABLE IF NOT EXISTS public.api_status_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    endpoint TEXT,
-    is_operational BOOLEAN NOT NULL,
-    response_time_ms INTEGER NOT NULL,
-    status_code INTEGER NOT NULL
-);
-
--- Enable RLS for public read access
-ALTER TABLE public.api_status_logs ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Allow public read access to api_status_logs" 
-ON public.api_status_logs
-FOR SELECT 
-TO public
-USING (true);
-
--- 2. Create the get_uptime_90_days RPC Function
--- Supports per-endpoint filtering and weighted daily uptime percentage grading.
+-- 2. Upgrade the get_uptime_90_days RPC Function
+-- Supports per-endpoint filtering and realistic daily uptime grading.
 CREATE OR REPLACE FUNCTION public.get_uptime_90_days(target_endpoint TEXT DEFAULT NULL)
 RETURNS TABLE (
     date DATE,

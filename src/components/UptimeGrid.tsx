@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import dayjs from 'dayjs';
 import { ChevronLeft, ChevronRight, CheckCheck } from 'lucide-react';
 import type { ServiceComponent } from './ComponentList';
+import { useTranslation } from '../lib/i18n';
 
 export interface UptimeDay {
   date: string;
@@ -20,6 +21,7 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
   days,
   components = []
 }) => {
+  const { t } = useTranslation();
   // Active component selection
   const [selectedCompId, setSelectedCompId] = useState<string>(() => {
     return components.length > 0 ? components[0].id : '';
@@ -48,7 +50,7 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
     const textToCopy = JSON.stringify(payload, null, 2);
     if (navigator.clipboard) {
       navigator.clipboard.writeText(textToCopy);
-      showCopyToast(`Copied ${compName} uptime (${dayjs(day.date).format('MMM D, YYYY')})`);
+      showCopyToast(t('uptimeGrid.copiedUptime', { name: compName, date: dayjs(day.date).format('MMM D, YYYY') }));
     }
   };
 
@@ -70,12 +72,12 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
 
   const getStatusText = (status: UptimeDay['status']) => {
     switch (status) {
-      case 'operational': return 'Operational (100%)';
-      case 'degraded':    return 'Degraded performance';
-      case 'outage':      return 'Major outage';
-      case 'maintenance': return 'Maintenance';
-      case 'no-data':     return 'No data';
-      default:            return 'No data';
+      case 'operational': return t('uptimeGrid.operational100');
+      case 'degraded':    return t('uptimeGrid.degraded');
+      case 'outage':      return t('uptimeGrid.majorOutage');
+      case 'maintenance': return t('uptimeGrid.maintenance');
+      case 'no-data':     return t('uptimeGrid.noData');
+      default:            return t('uptimeGrid.noData');
     }
   };
 
@@ -118,7 +120,7 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
               value={selectedCompId}
               onChange={e => setSelectedCompId(e.target.value)}
               className="w-full text-[14px] font-semibold text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm px-3.5 py-2 cursor-pointer hover:border-gray-400 dark:hover:border-gray-600 focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors"
-              aria-label="Select component to view uptime"
+              aria-label={t('uptimeGrid.selectComponent')}
             >
               {components.map(comp => (
                 <option key={comp.id} value={comp.id}>
@@ -143,8 +145,8 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
                 ? 'bg-gray-50 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed'
                 : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 cursor-pointer active:scale-95'
             }`}
-            title="Previous 3 months"
-            aria-label="Previous 3 months"
+            title={t('uptimeGrid.prev3Months')}
+            aria-label={t('uptimeGrid.prev3Months')}
           >
             <ChevronLeft size={18} />
           </button>
@@ -152,7 +154,7 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
           <span className="flex items-center gap-1 select-none">
             <span className="text-gray-900 dark:text-gray-100 font-semibold">{monthsToDisplay[0]?.format('MMMM')}</span>
             <var className="not-italic text-gray-500 dark:text-gray-400">{monthsToDisplay[0]?.format('YYYY')}</var>
-            <span className="mx-1 text-gray-400 dark:text-gray-500">to</span>
+            <span className="mx-1 text-gray-400 dark:text-gray-500">{t('common.to')}</span>
             <span className="text-gray-900 dark:text-gray-100 font-semibold">{monthsToDisplay[2]?.format('MMMM')}</span>
             <var className="not-italic text-gray-500 dark:text-gray-400">{monthsToDisplay[2]?.format('YYYY')}</var>
           </span>
@@ -165,8 +167,8 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
                 ? 'bg-gray-50 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed'
                 : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 cursor-pointer active:scale-95'
             }`}
-            title="Next 3 months"
-            aria-label="Next 3 months"
+            title={t('uptimeGrid.next3Months')}
+            aria-label={t('uptimeGrid.next3Months')}
           >
             <ChevronRight size={18} />
           </button>
@@ -220,8 +222,8 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
                       }`}
                       title={
                         !isNoData
-                          ? `${activeServiceName}\n${formattedDate}\n${statusText}\n\nClick to copy JSON diagnostic data`
-                          : `${formattedDate}\nNo data recorded`
+                          ? `${activeServiceName}\n${formattedDate}\n${statusText}\n\n${t('uptimeGrid.clickToCopyDiagnostic')}`
+                          : `${formattedDate}\n${t('uptimeGrid.noDataRecorded')}`
                       }
                     >
                       <svg

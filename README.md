@@ -186,10 +186,10 @@ open-status-page/
 ├── public/
 │   ├── _redirects                   # SPA routing fallback
 │   ├── open-status-page.sinon-7cf.workers.dev.webp # UI preview screenshot
-│   └── favicon.svg                  # Favicon
+│   └── favicon.webp                 # Favicon / Website Logo
 ├── src/
 │   ├── components/
-│   │   ├── Header.tsx               # Logo + Subscribe button + GitHub link + dark mode toggle
+│   │   ├── Header.tsx               # Logo + Language Switcher + Subscribe + GitHub + Dark Mode
 │   │   ├── SubscribeModal.tsx       # Telegram subscription modal (@gateway9armstatus)
 │   │   ├── StatusBanner.tsx         # Animated status indicator with 24h incident badge
 │   │   ├── ComponentList.tsx        # Multi-service list + 288-check grid & click-to-copy
@@ -199,7 +199,11 @@ open-status-page/
 │   │   ├── PastIncidents.tsx        # 14-day incident summary with 24h counter badge
 │   │   └── AdminPanel.tsx           # Secure incident management portal (/admin)
 │   ├── lib/
-│   │   └── supabase.ts              # Supabase client
+│   │   ├── supabase.ts              # Supabase client
+│   │   ├── translations.ts          # Thai & English localized UI strings
+│   │   ├── LanguageContext.ts       # React Language Context hook
+│   │   ├── LanguageProvider.tsx     # Language state provider (TH/EN)
+│   │   └── incidentTranslator.ts    # Automated incident status translation
 │   ├── App.tsx                      # Main app — state orchestration, multi-endpoint sync
 │   ├── index.css                    # Tailwind + Inter font + shimmer/pulse animations
 │   └── main.tsx
@@ -209,7 +213,8 @@ open-status-page/
 │   │       ├── index.ts             # Parallel multi-endpoint check & Telegram broadcast logic
 │   │       └── deno.json            # Deno compiler config for IDE support
 │   ├── setup.sql                    # incidents table + cron schedule
-│   └── setup_api_logs.sql           # api_status_logs table + 90-day uptime RPC
+│   ├── setup_api_logs.sql           # api_status_logs table + 90-day uptime RPC
+│   └── upgrade_uptime_rpc.sql       # Per-endpoint weighted 90-day uptime RPC
 ├── .env.example                     # Environment variable template
 └── DESIGN.md                        # Design system reference
 ```

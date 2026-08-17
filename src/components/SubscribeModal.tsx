@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Bell, ExternalLink, Check } from 'lucide-react';
+import { useTranslation } from '../lib/i18n';
 
 interface SubscribeModalProps {
   isOpen: boolean;
@@ -7,6 +8,7 @@ interface SubscribeModalProps {
 }
 
 export const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   return (
@@ -19,7 +21,7 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, onClose 
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-          aria-label="Close modal"
+          aria-label={t('common.close')}
         >
           <X size={18} />
         </button>
@@ -31,10 +33,10 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, onClose 
           </div>
           <div>
             <h3 className="text-[17px] font-semibold text-gray-900 dark:text-gray-100">
-              รับการแจ้งเตือนสถานะระบบ (Subscribe)
+              {t('subscribe.modalTitle')}
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              รับการแจ้งเตือนทันทีเมื่อระบบขัดข้องหรือกลับมาใช้งานได้ปกติ
+              {t('subscribe.modalSubtitle')}
             </p>
           </div>
         </div>
@@ -50,13 +52,13 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, onClose 
             </div>
             <div>
               <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-1.5">
-                <span>Telegram Broadcast Channel</span>
+                <span>{t('subscribe.channelTitle')}</span>
                 <span className="text-[10px] bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-bold px-1.5 py-0.2 rounded">
-                  OFFICIAL
+                  {t('subscribe.officialBadge')}
                 </span>
               </h4>
               <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                ช่องทางแจ้งเตือน: <strong className="text-blue-600 dark:text-blue-400 font-mono">@gateway9armstatus</strong>
+                {t('subscribe.channelHandle')}
               </p>
             </div>
           </div>
@@ -64,15 +66,15 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, onClose 
           <div className="space-y-1.5 text-xs text-gray-600 dark:text-gray-300 mb-4 pl-1">
             <div className="flex items-center gap-2">
               <Check size={13} className="text-green-500 shrink-0" />
-              <span>แจ้งเตือนทันทีแบบ Real-time เมื่อตรวจพบระบบขัดข้อง</span>
+              <span>{t('subscribe.feature1')}</span>
             </div>
             <div className="flex items-center gap-2">
               <Check size={13} className="text-green-500 shrink-0" />
-              <span>แจ้งเตือนอัตโนมัติเมื่อระบบกลับมาใช้งานได้ปกติ</span>
+              <span>{t('subscribe.feature2')}</span>
             </div>
             <div className="flex items-center gap-2">
               <Check size={13} className="text-green-500 shrink-0" />
-              <span>บรอดแคสต์อัตโนมัติผ่าน @th9arm_bot ตลอด 24 ชม.</span>
+              <span>{t('subscribe.feature3')}</span>
             </div>
           </div>
 
@@ -82,14 +84,14 @@ export const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, onClose 
             rel="noopener noreferrer"
             className="w-full py-2.5 px-4 bg-[#229ED9] hover:bg-[#1e8cc0] text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-2 shadow-xs transition-colors"
           >
-            <span>เข้าร่วมช่อง @gateway9armstatus</span>
+            <span>{t('subscribe.joinBtn')}</span>
             <ExternalLink size={13} />
           </a>
         </div>
 
         {/* Footer info */}
         <p className="text-[11px] text-center text-gray-400 dark:text-gray-500">
-          ไม่ต้องลงทะเบียนหรือกรอกอีเมล เพียงกดเปิดใน Telegram เพื่อเข้าร่วม
+          {t('subscribe.footerNote')}
         </p>
       </div>
     </div>

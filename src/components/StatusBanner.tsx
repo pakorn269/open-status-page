@@ -2,6 +2,7 @@ import React from 'react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useTranslation } from '../lib/i18n';
 
 dayjs.extend(relativeTime);
 
@@ -18,11 +19,13 @@ export const StatusBanner: React.FC<StatusBannerProps> = ({
   responseTimeMs,
   incidentCount24h = 0,
 }) => {
+  const { t } = useTranslation();
+
   const getStatusConfig = () => {
     switch (status) {
       case 'operational':
         return {
-          text: 'All Systems Operational',
+          text: t('banner.operational'),
           dotClass: 'bg-green-400',
           borderClass: 'border-green-200 dark:border-green-900',
           bgClass: 'bg-green-50 dark:bg-green-950',
@@ -32,7 +35,7 @@ export const StatusBanner: React.FC<StatusBannerProps> = ({
         };
       case 'degraded':
         return {
-          text: 'Degraded Performance',
+          text: t('banner.degraded'),
           dotClass: 'bg-yellow-400',
           borderClass: 'border-yellow-200 dark:border-yellow-900',
           bgClass: 'bg-yellow-50 dark:bg-yellow-950',
@@ -42,7 +45,7 @@ export const StatusBanner: React.FC<StatusBannerProps> = ({
         };
       case 'outage':
         return {
-          text: 'Major Outage',
+          text: t('banner.outage'),
           dotClass: 'bg-red-400',
           borderClass: 'border-red-200 dark:border-red-900',
           bgClass: 'bg-red-50 dark:bg-red-950',
@@ -75,7 +78,7 @@ export const StatusBanner: React.FC<StatusBannerProps> = ({
               ? 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
               : `${config.badgeBg} ${config.badgeText}`
           }`}
-          title={`${incidentCount24h} incident(s) recorded in the past 24 hours`}
+          title={`${incidentCount24h} incident(s)`}
         >
           {incidentCount24h > 0 ? (
             <AlertCircle size={12} className="text-amber-600 dark:text-amber-400 shrink-0" />
@@ -84,8 +87,8 @@ export const StatusBanner: React.FC<StatusBannerProps> = ({
           )}
           <span>
             {incidentCount24h === 0
-              ? '0 incidents in 24h'
-              : `${incidentCount24h} incident${incidentCount24h > 1 ? 's' : ''} in 24h`}
+              ? t('banner.zeroIncidents')
+              : t('banner.incidentsCount', { count: incidentCount24h, s: incidentCount24h > 1 ? 's' : '' })}
           </span>
         </span>
 
@@ -96,7 +99,7 @@ export const StatusBanner: React.FC<StatusBannerProps> = ({
         )}
 
         <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${config.badgeBg} ${config.badgeText}`}>
-          Checked {dayjs(lastRefreshed).fromNow()}
+          {t('banner.checkedAgo', { time: dayjs(lastRefreshed).fromNow() })}
         </span>
       </div>
     </div>

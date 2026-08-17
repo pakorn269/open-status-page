@@ -2,6 +2,8 @@ import React, { useState, useMemo } from 'react';
 import dayjs from 'dayjs';
 import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
 import type { ServiceComponent } from './ComponentList';
+import { useTranslation } from '../lib/i18n';
+import { translateIncidentTitle, translateIncidentMessage, formatIncidentTimestamp } from '../lib/incidentTranslator';
 
 export interface Incident {
   id: string;
@@ -16,6 +18,7 @@ export interface Incident {
 export interface MonthIncidents {
   name: string;
   year: number;
+  monthIndex?: number;
   incidents: Incident[];
 }
 
@@ -25,6 +28,7 @@ interface IncidentHistoryProps {
 }
 
 export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ months, components = [] }) => {
+  const { t, language } = useTranslation();
   // Pagination page: 0 = latest 3 months, 1 = previous 3 months, etc.
   const [page, setPage] = useState<number>(0);
   const MAX_PAGES = 3; // Up to 4 quarterly periods (12 months / 1 year total)
@@ -76,6 +80,15 @@ export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ months, compon
     }
   };
 
+  const getImpactLabel = (impact: Incident['impact']) => {
+    switch (impact) {
+      case 'none':     return t('incidentHistory.impactNone');
+      case 'minor':    return t('incidentHistory.impactMinor');
+      case 'major':    return t('incidentHistory.impactMajor');
+      case 'critical': return t('incidentHistory.impactCritical');
+    }
+  };
+
   // Generate the 3-month window for current page (from newest to oldest)
   const endMonth = dayjs().startOf('month').subtract(page * 3, 'month');
   const pageMonths = [
@@ -105,7 +118,7 @@ export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ months, compon
               className="text-[13px] font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm px-3 py-1.5 cursor-pointer hover:border-gray-400 dark:hover:border-gray-600 focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors"
               aria-label="Filter by component"
             >
-              <option value="all">All Components</option>
+              <option value="all">{t('incidentHistory.allComponents')}</option>
               {availableComponents.map(comp => (
                 <option key={comp} value={comp}>
                   {comp}
@@ -122,11 +135,11 @@ export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ months, compon
               className="text-[13px] font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm px-3 py-1.5 cursor-pointer hover:border-gray-400 dark:hover:border-gray-600 focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors"
               aria-label="Filter by impact level"
             >
-              <option value="all">All Impact Levels</option>
-              <option value="critical">Critical</option>
-              <option value="major">Major</option>
-              <option value="minor">Minor</option>
-              <option value="none">Informational</option>
+              <option value="all">{t('incidentHistory.allImpacts')}</option>
+              <option value="critical">{t('incidentHistory.impactCritical')}</option>
+              <option value="major">{t('incidentHistory.impactMajor')}</option>
+              <option value="minor">{t('incidentHistory.impactMinor')}</option>
+              <option value="none">{t('incidentHistory.impactNone')}</option>
             </select>
           </div>
 
@@ -135,10 +148,10 @@ export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ months, compon
             <button
               onClick={resetFilters}
               className="flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              title="Reset filters"
+              title={t('incidentHistory.resetFilters')}
             >
               <RotateCcw size={13} />
-              Reset
+              {t('incidentHistory.resetFilters')}
             </button>
           )}
         </div>
@@ -153,17 +166,17 @@ export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ months, compon
                 ? 'bg-gray-50 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed'
                 : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 cursor-pointer active:scale-95'
             }`}
-            title="Older incidents"
-            aria-label="Older incidents"
+            title={t('incidentHistory.olderIncidents')}
+            aria-label={t('incidentHistory.olderIncidents')}
           >
             <ChevronLeft size={18} />
           </button>
 
           <span className="flex items-center gap-1 select-none">
-            <span className="text-gray-900 dark:text-gray-100 font-semibold">{pageMonths[2]?.format('MMMM')}</span>
+            <span className="text-gray-900 dark:text-gray-100 font-semibold">{pageMonths[2]?.locale(language).format('MMMM')}</span>
             <var className="not-italic text-gray-500 dark:text-gray-400">{pageMonths[2]?.format('YYYY')}</var>
-            <span className="mx-1 text-gray-400 dark:text-gray-500">to</span>
-            <span className="text-gray-900 dark:text-gray-100 font-semibold">{pageMonths[0]?.format('MMMM')}</span>
+            <span className="mx-1 text-gray-400 dark:text-gray-500">{t('common.to')}</span>
+            <span className="text-gray-900 dark:text-gray-100 font-semibold">{pageMonths[0]?.locale(language).format('MMMM')}</span>
             <var className="not-italic text-gray-500 dark:text-gray-400">{pageMonths[0]?.format('YYYY')}</var>
           </span>
 
@@ -175,8 +188,8 @@ export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ months, compon
                 ? 'bg-gray-50 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed'
                 : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 cursor-pointer active:scale-95'
             }`}
-            title="Newer incidents"
-            aria-label="Newer incidents"
+            title={t('incidentHistory.newerIncidents')}
+            aria-label={t('incidentHistory.newerIncidents')}
           >
             <ChevronRight size={18} />
           </button>
@@ -186,13 +199,13 @@ export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ months, compon
       {/* Months Container */}
       <div className="flex flex-col gap-10">
         {pageMonths.map(m => {
-          const monthName = m.format('MMMM');
+          const monthName = m.locale(language).format('MMMM');
           const year = m.year();
-          const monthKey = `${monthName}-${year}`;
+          const monthKey = `${m.format('YYYY-MM')}`;
 
-          // Find incidents from props
+          // Find incidents from props by month index & year
           const matchedMonth = months?.find(
-            mObj => mObj.name.toLowerCase() === monthName.toLowerCase() && mObj.year === year
+            mObj => (mObj.monthIndex !== undefined ? mObj.monthIndex === m.month() : mObj.name.toLowerCase() === m.locale('en').format('MMMM').toLowerCase()) && mObj.year === year
           );
 
           let incidentList = matchedMonth ? matchedMonth.incidents : [];
@@ -226,7 +239,7 @@ export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ months, compon
               <div className="flex flex-col gap-6">
                 {incidentList.length === 0 ? (
                   <p className="text-gray-400 dark:text-gray-500 text-[14px] italic">
-                    {hasActiveFilters ? 'No incidents match the active filters for this month.' : 'No incidents reported.'}
+                    {hasActiveFilters ? t('incidentHistory.noIncidentsMatchFilter') : t('incidentHistory.noIncidentsReported')}
                   </p>
                 ) : (
                   <>
@@ -235,10 +248,10 @@ export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ months, compon
                         <div key={incident.id} className="flex flex-col gap-1 pl-3 border-l-2 border-gray-200 dark:border-gray-700">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className={`text-[15px] font-medium ${getImpactColor(incident.impact)}`}>
-                              {incident.name}
+                              {translateIncidentTitle(incident.name, language)}
                             </span>
                             <span className={`text-[11px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${getImpactBadge(incident.impact)}`}>
-                              {incident.impact}
+                              {getImpactLabel(incident.impact)}
                             </span>
                             {incident.component && (
                               <span className="text-[11px] font-mono bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-1.5 py-0.5 rounded">
@@ -247,10 +260,10 @@ export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ months, compon
                             )}
                           </div>
                           <div className="text-[14px] text-gray-800 dark:text-gray-200 mt-1">
-                            {incident.message}
+                            {translateIncidentMessage(incident.message, language)}
                           </div>
                           <div className="text-[12px] text-gray-400 dark:text-gray-500 mt-1">
-                            {incident.timestamp}
+                            {formatIncidentTimestamp(incident.createdAt || incident.timestamp, language)}
                           </div>
                         </div>
                       ))}
@@ -269,7 +282,7 @@ export const IncidentHistory: React.FC<IncidentHistoryProps> = ({ months, compon
                           }
                         }}
                       >
-                        {isExpanded ? '- Collapse Incidents' : `+ Show All ${incidentList.length} Incidents`}
+                        {isExpanded ? t('incidentHistory.collapseIncidents') : t('incidentHistory.showAllIncidents', { count: incidentList.length })}
                       </div>
                     )}
                   </>
