@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 serve(async (req) => {
-  // CORS Headers if needed (standard for edge functions)
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*' } });
   }
@@ -10,34 +9,26 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    const apiKey = Deno.env.get('ANTHROPIC_AUTH_TOKEN');
-    if (!apiKey) {
-      throw new Error('ANTHROPIC_AUTH_TOKEN is not set');
-    }
-
-    // Ping the API
-    const response = await fetch("https://gateway.9arm.co/v1/messages", {
-      method: "POST",
+    // Send an unauthenticated ping to check reachability only.
+    // We expect a 401 Unauthorized — this proves the gateway is alive and responding.
+    // We do NOT use a real API key, so no token is consumed and no auth issues cause false alerts.
+    const response = await fetch("https://gateway.9arm.co/v1/models", {
+      method: "GET",
       headers: {
-        "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
       },
-      body: JSON.stringify({
-        model: "qwen3.6-35b-a3b",
-        messages: [{ role: "user", content: "test" }],
-        max_tokens: 5,
-      }),
     });
 
     const endTime = Date.now();
     const responseTimeMs = endTime - startTime;
-    // Treat any response from the server (including 4xx) as "operational" —
-    // a 4xx means the gateway is reachable but rejected our request (e.g. wrong key).
-    // Only 5xx responses indicate a true server-side failure.
+
+    // Operational = server responded with anything other than 5xx.
+    // 401 Unauthorized = gateway is up, auth required (expected, fully operational).
+    // 5xx = server-side failure (true outage).
+    // Network error / timeout = caught below as non-operational.
     const isOperational = response.status < 500;
 
-    // Initialize Supabase Client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SERVICE_ROLE_KEY');
 
@@ -47,7 +38,6 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Insert the result into the api_status_logs table
     const { error: insertError } = await supabase
       .from('api_status_logs')
       .insert([
@@ -81,12 +71,12 @@ serve(async (req) => {
   } catch (err: any) {
     const endTime = Date.now();
     const responseTimeMs = endTime - startTime;
-    
-    // Log failures as non-operational as well
+
+    // Network failure or timeout — gateway is unreachable
     try {
       const supabaseUrl = Deno.env.get('SUPABASE_URL');
       const supabaseServiceKey = Deno.env.get('SERVICE_ROLE_KEY');
-      
+
       if (supabaseUrl && supabaseServiceKey) {
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
         await supabase
@@ -94,7 +84,7 @@ serve(async (req) => {
           .insert([
             {
               endpoint: 'gateway.9arm.co',
-              status_code: 500,
+              status_code: 0,
               response_time_ms: responseTimeMs,
               is_operational: false
             }
