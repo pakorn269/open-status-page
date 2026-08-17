@@ -8,6 +8,7 @@ export interface ServiceComponent {
   status: 'operational' | 'degraded' | 'partial_outage' | 'major_outage' | 'maintenance';
   uptimeDays: UptimeDay[];
   uptimePercentage: number;
+  responseTimeMs?: number;
 }
 
 interface ComponentListProps {
@@ -69,7 +70,12 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components }) => {
             {/* Component Header */}
             <div className="flex justify-between items-center">
               <span className="text-[15px] font-medium text-gray-900 dark:text-gray-100">{comp.name}</span>
-              <div className="flex items-center gap-2 group relative">
+              <div className="flex items-center gap-2 group relative flex-wrap justify-end">
+                {comp.responseTimeMs !== undefined && (
+                  <span className="text-[12px] text-gray-400 dark:text-gray-500 font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
+                    {comp.responseTimeMs}ms
+                  </span>
+                )}
                 <span className={`text-[13px] font-medium ${getComponentStatusColor(comp.status)}`}>
                   {getComponentStatusText(comp.status)}
                 </span>

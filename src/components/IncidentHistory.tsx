@@ -7,6 +7,7 @@ export interface Incident {
   message: string;
   impact: 'none' | 'minor' | 'major' | 'critical';
   timestamp: string;
+  createdAt?: string;
 }
 
 export interface MonthIncidents {
