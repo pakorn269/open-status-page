@@ -116,9 +116,11 @@ function App() {
         const latest = statusData[0];
         lastRefreshed = new Date(latest.created_at || new Date());
         
-        if (!latest.is_operational || latest.status_code >= 500) {
+        if (!latest.is_operational) {
+          // is_operational=false means 5xx or network failure — true outage
           overallStatus = 'outage';
         } else if (latest.response_time_ms > 2000 || latest.status_code >= 400) {
+          // Reachable but slow or returning 4xx (e.g. auth rejection) — degraded
           overallStatus = 'degraded';
         }
       }

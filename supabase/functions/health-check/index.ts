@@ -32,7 +32,10 @@ serve(async (req) => {
 
     const endTime = Date.now();
     const responseTimeMs = endTime - startTime;
-    const isOperational = response.status >= 200 && response.status < 300;
+    // Treat any response from the server (including 4xx) as "operational" —
+    // a 4xx means the gateway is reachable but rejected our request (e.g. wrong key).
+    // Only 5xx responses indicate a true server-side failure.
+    const isOperational = response.status < 500;
 
     // Initialize Supabase Client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
