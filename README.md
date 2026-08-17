@@ -4,6 +4,8 @@ An open-source, community-run status monitor for **[gateway.9arm.co](https://gat
 
 > **Disclaimer:** This project is not affiliated with or endorsed by the operators of `gateway.9arm.co`. It is an independent community tool for checking whether the gateway is publicly reachable.
 
+🔴 **Live:** [open-status-page.sinon-7cf.workers.dev](https://open-status-page.sinon-7cf.workers.dev)
+
 ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 ![Built with React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)
 ![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?style=flat-square&logo=supabase)
