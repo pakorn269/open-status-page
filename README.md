@@ -1,8 +1,8 @@
 # Open Status Page
 
-A self-hosted, open-source status page for monitoring API services. Built with React 19, TypeScript, Vite, and Supabase — designed to be deployed on Cloudflare Pages.
+An open-source, community-run status monitor for **[gateway.9arm.co](https://gateway.9arm.co)** — an Anthropic-compatible API gateway. Built with React 19, TypeScript, Vite, and Supabase.
 
-Live demo: **[status.9arm.co](https://status.9arm.co)** — monitoring the Anthropic-compatible API gateway at `gateway.9arm.co`.
+> **Disclaimer:** This project is not affiliated with or endorsed by the operators of `gateway.9arm.co`. It is an independent community tool for checking whether the gateway is publicly reachable.
 
 ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 ![Built with React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)
