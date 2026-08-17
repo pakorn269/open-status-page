@@ -119,12 +119,8 @@ function App() {
         if (!latest.is_operational) {
           // is_operational=false means 5xx or network failure — true outage
           overallStatus = 'outage';
-        } else if (latest.response_time_ms > 2000) {
-          // Reachable but very slow
-          overallStatus = 'degraded';
-        } else if (latest.status_code >= 400 && latest.status_code !== 401) {
-          // 4xx other than 401 is unexpected — mark as degraded
-          // 401 Unauthorized is the normal response for an unauthenticated ping
+        } else if (latest.response_time_ms > 2000 || latest.status_code >= 400) {
+          // Reachable but slow, or gateway rejected the request (auth/quota/model) — degraded
           overallStatus = 'degraded';
         }
       }

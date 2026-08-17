@@ -9,24 +9,35 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
-    // Send an unauthenticated ping to check reachability only.
-    // We expect a 401 Unauthorized — this proves the gateway is alive and responding.
-    // We do NOT use a real API key, so no token is consumed and no auth issues cause false alerts.
-    const response = await fetch("https://gateway.9arm.co/v1/models", {
-      method: "GET",
+    const apiKey = Deno.env.get('ANTHROPIC_AUTH_TOKEN');
+    if (!apiKey) {
+      throw new Error('ANTHROPIC_AUTH_TOKEN is not set');
+    }
+
+    // End-to-end check: verify the gateway can authenticate AND invoke the model.
+    // Uses minimal tokens (max_tokens: 1) to keep cost near zero.
+    const response = await fetch("https://gateway.9arm.co/v1/messages", {
+      method: "POST",
       headers: {
+        "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
       },
+      body: JSON.stringify({
+        model: "qwen3.8-27b-fp8",
+        messages: [{ role: "user", content: "hi" }],
+        max_tokens: 1,
+      }),
     });
 
     const endTime = Date.now();
     const responseTimeMs = endTime - startTime;
 
-    // Operational = server responded with anything other than 5xx.
-    // 401 Unauthorized = gateway is up, auth required (expected, fully operational).
-    // 5xx = server-side failure (true outage).
-    // Network error / timeout = caught below as non-operational.
+    // Status mapping:
+    // 2xx — model responded correctly → Operational
+    // 4xx — server is up but rejected the request (auth/quota/model issue) → Degraded
+    // 5xx — server-side failure → Outage
+    // Network error / timeout → caught below → Outage
     const isOperational = response.status < 500;
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
