@@ -7,6 +7,10 @@ import { useTranslation } from '../lib/i18n';
 export interface UptimeDay {
   date: string;
   status: 'operational' | 'degraded' | 'outage' | 'maintenance' | 'no-data';
+  uptimePercentage?: number;
+  totalPings?: number;
+  outages?: number;
+  slowPings?: number;
 }
 
 interface UptimeGridProps {
@@ -45,6 +49,10 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
       date: dayjs(day.date).format('YYYY-MM-DD'),
       timestamp: day.date,
       status: day.status,
+      ...(day.uptimePercentage !== undefined ? { uptime_percentage: day.uptimePercentage } : {}),
+      ...(day.totalPings !== undefined ? { total_pings: day.totalPings } : {}),
+      ...(day.outages !== undefined ? { outages: day.outages } : {}),
+      ...(day.slowPings !== undefined ? { slow_pings: day.slowPings } : {}),
     };
 
     const textToCopy = JSON.stringify(payload, null, 2);
@@ -61,37 +69,50 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
 
   const getColor = (status: UptimeDay['status']) => {
     switch (status) {
-      case 'operational': return '#76ad2a'; // Green
-      case 'degraded':    return '#d9a92a'; // Yellow
-      case 'outage':      return '#e04343'; // Red
-      case 'maintenance': return '#2c84db'; // Blue
-      case 'no-data':     return '#EAEAEA'; // Gray
-      default:            return '#EAEAEA';
+      case 'operational': return '#22c55e'; // Green
+      case 'degraded':    return '#eab308'; // Amber/Yellow
+      case 'outage':      return '#ef4444'; // Red
+      case 'maintenance': return '#3b82f6'; // Blue
+      case 'no-data':     return '#e5e7eb'; // Light gray
+      default:            return '#e5e7eb';
     }
   };
 
-  const getStatusText = (status: UptimeDay['status']) => {
-    switch (status) {
-      case 'operational': return t('uptimeGrid.operational100');
-      case 'degraded':    return t('uptimeGrid.degraded');
-      case 'outage':      return t('uptimeGrid.majorOutage');
-      case 'maintenance': return t('uptimeGrid.maintenance');
-      case 'no-data':     return t('uptimeGrid.noData');
-      default:            return t('uptimeGrid.noData');
+  const getStatusText = (day: UptimeDay) => {
+    const pct = day.uptimePercentage !== undefined ? day.uptimePercentage.toFixed(2) : undefined;
+    switch (day.status) {
+      case 'operational':
+        return pct !== undefined && pct !== '100.00'
+          ? t('uptimeGrid.operationalWithPct', { pct })
+          : t('uptimeGrid.operational100');
+      case 'degraded':
+        return pct !== undefined
+          ? t('uptimeGrid.degradedWithPct', { pct })
+          : t('uptimeGrid.degraded');
+      case 'outage':
+        return pct !== undefined
+          ? t('uptimeGrid.outageWithPct', { pct })
+          : t('uptimeGrid.majorOutage');
+      case 'maintenance':
+        return t('uptimeGrid.maintenance');
+      case 'no-data':
+        return t('uptimeGrid.noData');
+      default:
+        return t('uptimeGrid.noData');
     }
   };
 
   const calculateMonthUptime = (monthDays: UptimeDay[]) => {
     const validDays = monthDays.filter(d => d.status !== 'no-data');
     if (validDays.length === 0) return '100.00';
-    let score = 0;
-    validDays.forEach(d => {
-      if (d.status === 'operational') score += 100;
-      else if (d.status === 'degraded') score += 95;
-      else if (d.status === 'outage') score += 0;
-      else score += 100;
-    });
-    return (score / validDays.length).toFixed(2);
+    const total = validDays.reduce((acc, d) => {
+      if (d.uptimePercentage !== undefined) return acc + d.uptimePercentage;
+      if (d.status === 'operational') return acc + 100;
+      if (d.status === 'degraded') return acc + 95;
+      if (d.status === 'outage') return acc + 0;
+      return acc + 100;
+    }, 0);
+    return (total / validDays.length).toFixed(2);
   };
 
   // Compute 3 months based on pageOffset (oldest to newest for calendar layout)
@@ -103,7 +124,7 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
   ];
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 rounded-sm mb-8 shadow-sm relative">
+    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 rounded-lg mb-8 shadow-sm relative">
       {/* Toast feedback notification */}
       {toastMessage && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs font-semibold px-4 py-2 rounded-full shadow-xl flex items-center gap-2 z-50 animate-fade-in">
@@ -119,7 +140,7 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
             <select
               value={selectedCompId}
               onChange={e => setSelectedCompId(e.target.value)}
-              className="w-full text-[14px] font-semibold text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm px-3.5 py-2 cursor-pointer hover:border-gray-400 dark:hover:border-gray-600 focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors"
+              className="w-full text-[14px] font-semibold text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-3.5 py-2 cursor-pointer hover:border-gray-400 dark:hover:border-gray-600 focus:outline-none focus:ring-1 focus:ring-gray-400 transition-colors"
               aria-label={t('uptimeGrid.selectComponent')}
             >
               {components.map(comp => (
@@ -140,7 +161,7 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
           <button
             onClick={() => setPageOffset(prev => Math.min(prev + 1, MAX_PAGE_OFFSET))}
             disabled={pageOffset >= MAX_PAGE_OFFSET}
-            className={`p-1.5 border border-gray-300 dark:border-gray-700 rounded-sm transition-colors ${
+            className={`p-1.5 border border-gray-300 dark:border-gray-700 rounded-lg transition-colors ${
               pageOffset >= MAX_PAGE_OFFSET
                 ? 'bg-gray-50 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed'
                 : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 cursor-pointer active:scale-95'
@@ -162,7 +183,7 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
           <button
             onClick={() => setPageOffset(prev => Math.max(prev - 1, 0))}
             disabled={pageOffset === 0}
-            className={`p-1.5 border border-gray-300 dark:border-gray-700 rounded-sm transition-colors ${
+            className={`p-1.5 border border-gray-300 dark:border-gray-700 rounded-lg transition-colors ${
               pageOffset === 0
                 ? 'bg-gray-50 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed'
                 : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 cursor-pointer active:scale-95'
@@ -199,7 +220,7 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
                 <h6 className="text-[15px] font-semibold text-gray-900 dark:text-gray-100 m-0">
                   {month.format('MMMM')} <var className="not-italic font-normal text-gray-500 dark:text-gray-400">{month.format('YYYY')}</var>
                 </h6>
-                <small className="text-[13px] font-semibold text-green-600 dark:text-green-400">
+                <small className="text-[13px] font-semibold text-emerald-600 dark:text-emerald-400 font-mono">
                   {calculateMonthUptime(monthDays)}%
                 </small>
               </div>
@@ -208,7 +229,7 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
               <div className="flex flex-wrap gap-[4px]">
                 {monthDays.map((day, idx) => {
                   const formattedDate = dayjs(day.date).format('MMM D, YYYY');
-                  const statusText = getStatusText(day.status);
+                  const statusText = getStatusText(day);
                   const isNoData = day.status === 'no-data';
 
                   return (
@@ -217,8 +238,8 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
                       onClick={() => !isNoData && copyDayData(activeServiceName, day)}
                       className={`inline-flex ${
                         !isNoData
-                          ? 'tooltip cursor-pointer hover:opacity-75 active:scale-95 transition-all'
-                          : 'opacity-40'
+                          ? 'tooltip cursor-pointer hover:opacity-85 hover:scale-110 active:scale-95 transition-all'
+                          : 'opacity-30 dark:opacity-20'
                       }`}
                       title={
                         !isNoData
@@ -237,8 +258,8 @@ export const UptimeGrid: React.FC<UptimeGridProps> = ({
                           width="30"
                           height="30"
                           fill={getColor(day.status)}
-                          rx="3"
-                          className="transition-colors"
+                          rx="4"
+                          className="transition-colors dark:fill-opacity-90"
                         />
                       </svg>
                     </div>

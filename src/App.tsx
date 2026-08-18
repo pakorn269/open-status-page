@@ -191,19 +191,42 @@ function App() {
       }
 
       // 2. Fetch 90-day uptime per component in parallel
+      const parseUptimeRow = (row: any): UptimeDay => {
+        const uptimePct = row.uptime_pct !== undefined ? Number(row.uptime_pct) : 100;
+        let status: UptimeDay['status'] = row.status || 'operational';
+
+        // Accurate Status Grading:
+        // If degradation was recorded or uptime is under 99.9%, grade accordingly
+        if (status !== 'no-data') {
+          if (uptimePct < 90) {
+            status = 'outage';
+          } else if (uptimePct < 99.9) {
+            status = 'degraded';
+          } else {
+            status = 'operational';
+          }
+        }
+
+        return {
+          date: row.date || dayjs().toISOString(),
+          status,
+          uptimePercentage: uptimePct,
+          totalPings: row.total_pings !== undefined ? Number(row.total_pings) : undefined,
+          outages: row.outages !== undefined ? Number(row.outages) : undefined,
+        };
+      };
+
       const uptimeByComponent: Record<string, UptimeDay[]> = {};
       const { data: defaultRpcData } = await supabase.rpc('get_uptime_90_days');
 
       let defaultUptimeDays: UptimeDay[] = [];
       if (defaultRpcData && Array.isArray(defaultRpcData) && defaultRpcData.length > 0) {
-        defaultUptimeDays = defaultRpcData.map((row: any) => ({
-          date: row.date || dayjs().toISOString(),
-          status: row.status || 'operational',
-        }));
+        defaultUptimeDays = defaultRpcData.map(parseUptimeRow);
       } else {
         defaultUptimeDays = Array.from({ length: 90 }).map((_, i) => ({
           date: dayjs().subtract(89 - i, 'day').toISOString(),
           status: 'no-data',
+          uptimePercentage: 100,
         }));
       }
 
@@ -212,10 +235,7 @@ function App() {
           try {
             const { data } = await supabase.rpc('get_uptime_90_days', { target_endpoint: svc.name });
             if (data && Array.isArray(data) && data.length > 0) {
-              uptimeByComponent[svc.id] = data.map((row: any) => ({
-                date: row.date || dayjs().toISOString(),
-                status: row.status || 'operational',
-              }));
+              uptimeByComponent[svc.id] = data.map(parseUptimeRow);
             }
           } catch (e) {
             console.error(`Failed to fetch 90-day uptime for ${svc.name}:`, e);
@@ -224,8 +244,9 @@ function App() {
       );
 
       const validDefaultDays = defaultUptimeDays.filter(d => d.status !== 'no-data');
-      const operationalDefaultDays = validDefaultDays.filter(d => d.status === 'operational').length;
-      const uptimePercentage = validDefaultDays.length > 0 ? (operationalDefaultDays / validDefaultDays.length) * 100 : 100;
+      const uptimePercentage = validDefaultDays.length > 0
+        ? validDefaultDays.reduce((acc, d) => acc + (d.uptimePercentage ?? 100), 0) / validDefaultDays.length
+        : 100;
 
       // 3. Scalable Latency Logs (Ordered descending to always include present-time logs, up to 3000 rows)
       const { data: latencyRows } = await supabase
@@ -257,8 +278,9 @@ function App() {
         // Component 90-day uptime history
         const compUptimeDays = uptimeByComponent[svc.id] || defaultUptimeDays;
         const validCompDays = compUptimeDays.filter(d => d.status !== 'no-data');
-        const operationalCompDays = validCompDays.filter(d => d.status === 'operational').length;
-        const comp90dUptime = validCompDays.length > 0 ? (operationalCompDays / validCompDays.length) * 100 : 100;
+        const comp90dUptime = validCompDays.length > 0
+          ? validCompDays.reduce((acc, d) => acc + (d.uptimePercentage ?? 100), 0) / validCompDays.length
+          : 100;
 
         return {
           id: svc.id,

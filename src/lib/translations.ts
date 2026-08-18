@@ -113,9 +113,13 @@ export interface Translations {
     selectComponent: string;
     prev3Months: string;
     next3Months: string;
+    operational: string;
     operational100: string;
+    operationalWithPct: string;
     degraded: string;
+    degradedWithPct: string;
     majorOutage: string;
+    outageWithPct: string;
     maintenance: string;
     noData: string;
     copiedUptime: string;
@@ -307,9 +311,13 @@ export const translations: Record<Language, Translations> = {
       selectComponent: 'เลือกบริการเพื่อดูความพร้อมใช้งาน',
       prev3Months: '3 เดือนก่อนหน้า',
       next3Months: '3 เดือนถัดไป',
+      operational: 'ใช้งานได้ตามปกติ',
       operational100: 'ใช้งานได้ตามปกติ (100%)',
+      operationalWithPct: 'ใช้งานได้ตามปกติ ({pct}%)',
       degraded: 'ประสิทธิภาพลดลง',
+      degradedWithPct: 'ประสิทธิภาพลดลง ({pct}%)',
       majorOutage: 'ระบบขัดข้องรุนแรง',
+      outageWithPct: 'ระบบขัดข้อง ({pct}%)',
       maintenance: 'ปิดปรับปรุง',
       noData: 'ไม่มีข้อมูล',
       copiedUptime: 'คัดลอกข้อมูลความพร้อมใช้งาน {name} แล้ว ({date})',
@@ -499,9 +507,13 @@ export const translations: Record<Language, Translations> = {
       selectComponent: 'Select component to view uptime',
       prev3Months: 'Previous 3 months',
       next3Months: 'Next 3 months',
+      operational: 'Operational',
       operational100: 'Operational (100%)',
+      operationalWithPct: 'Operational ({pct}%)',
       degraded: 'Degraded performance',
+      degradedWithPct: 'Degraded performance ({pct}%)',
       majorOutage: 'Major outage',
+      outageWithPct: 'Major outage ({pct}%)',
       maintenance: 'Maintenance',
       noData: 'No data',
       copiedUptime: 'Copied {name} uptime ({date})',

@@ -34,12 +34,12 @@ BEGIN
         d.check_date AS date,
         CASE 
             WHEN s.total_pings IS NULL OR s.total_pings = 0 THEN 'no-data'
-            -- If uptime is 98%+ (normal minor transient retry), it is operational
-            WHEN (s.operational_pings::numeric / s.total_pings::numeric) >= 0.98 THEN 'operational'
-            -- If uptime is between 80% and 98%, or heavily degraded, it's degraded performance
-            WHEN (s.operational_pings::numeric / s.total_pings::numeric) >= 0.80 THEN 'degraded'
-            -- If severe downtime (< 80% uptime), it is a major outage
-            ELSE 'outage'
+            -- If severe downtime (< 90% uptime or >= 5 outages), it is a major outage
+            WHEN (s.operational_pings::numeric / s.total_pings::numeric) < 0.90 OR s.outages >= 5 THEN 'outage'
+            -- If any outages occurred, or >= 5 slow pings (>3.5s), or uptime < 99.9%, it is degraded
+            WHEN s.outages > 0 OR s.slow_pings >= 5 OR (s.operational_pings::numeric / s.total_pings::numeric) < 0.999 THEN 'degraded'
+            -- Otherwise 100% operational
+            ELSE 'operational'
         END AS status,
         CASE 
             WHEN s.total_pings IS NULL OR s.total_pings = 0 THEN 100.00
