@@ -119,7 +119,33 @@ function App() {
   useEffect(() => {
     fetchUptimeData();
     const intervalId = setInterval(() => fetchUptimeData(true), 60000);
-    return () => clearInterval(intervalId);
+
+    // Supabase Realtime subscription for instant live chart updates
+    const channel = supabase
+      .channel('api_status_logs_realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'api_status_logs' },
+        (payload) => {
+          const newRow = payload.new as PingLog;
+          if (newRow && newRow.created_at) {
+            setState(prev => {
+              const updatedLatency = [...prev.latencyLogs, newRow].slice(-3000);
+              return {
+                ...prev,
+                latencyLogs: updatedLatency,
+                lastRefreshed: new Date(newRow.created_at),
+              };
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(intervalId);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Sync tab to URL
@@ -201,16 +227,14 @@ function App() {
       const operationalDefaultDays = validDefaultDays.filter(d => d.status === 'operational').length;
       const uptimePercentage = validDefaultDays.length > 0 ? (operationalDefaultDays / validDefaultDays.length) * 100 : 100;
 
-      // 3. 24-Hour Latency Logs
-      const since24h = dayjs().subtract(24, 'hour').toISOString();
+      // 3. Scalable Latency Logs (Ordered descending to always include present-time logs, up to 3000 rows)
       const { data: latencyRows } = await supabase
         .from('api_status_logs')
         .select('created_at, response_time_ms, status_code, is_operational, endpoint')
-        .gte('created_at', since24h)
-        .order('created_at', { ascending: true })
-        .limit(500);
+        .order('created_at', { ascending: false })
+        .limit(3000);
 
-      const latencyLogs: PingLog[] = latencyRows || [];
+      const latencyLogs: PingLog[] = latencyRows ? [...latencyRows].reverse() : [];
 
       // 4. Build Multi-Component Status List
       const componentsData: ServiceComponent[] = MONITORED_SERVICES.map(svc => {
@@ -385,7 +409,10 @@ function App() {
                   components={state.componentsData}
                   recentLogs={state.latencyLogs}
                 />
-                <ResponseTimeChart logs={state.latencyLogs} />
+                <ResponseTimeChart
+                  logs={state.latencyLogs}
+                  lastUpdated={state.lastRefreshed}
+                />
                 <PastIncidents
                   months={state.incidentData}
                   incidentCount24h={state.incidentCount24h}

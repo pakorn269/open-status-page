@@ -61,14 +61,31 @@ export interface Translations {
   };
   chart: {
     title: string;
+    titleWithRange: string;
     subtitle: string;
     allEndpoints: string;
+    noData: string;
     noData24h: string;
     hoursAgo24: string;
     hoursAgo12: string;
     now: string;
     copiedLatency: string;
     clickToCopy: string;
+    liveBadge: string;
+    updatedJustNow: string;
+    range1h: string;
+    range6h: string;
+    range24h: string;
+    range7d: string;
+    rangeLabel1h: string;
+    rangeLabel6h: string;
+    rangeLabel24h: string;
+    rangeLabel7d: string;
+    avg: string;
+    p95: string;
+    min: string;
+    max: string;
+    current: string;
   };
   pastIncidents: {
     title: string;
@@ -237,15 +254,32 @@ export const translations: Record<Language, Translations> = {
       noPingRecorded: 'ไม่มีการบันทึกข้อมูลการตรวจสอบ',
     },
     chart: {
-      title: 'เวลาตอบสนองและความหน่วง (Latency 24 ชม.)',
-      subtitle: 'การวัดความหน่วงของแต่ละบริการอย่างต่อเนื่อง · (คลิกจุดใดก็ได้เพื่อคัดลอกข้อมูล)',
+      title: 'เวลาตอบสนองและความหน่วง',
+      titleWithRange: 'เวลาตอบสนองและความหน่วง ({range})',
+      subtitle: 'การวัดความหน่วงของแต่ละบริการอย่างต่อเนื่อง · เลื่อนเมาส์เพื่อดูจุดเวลา หรือคลิกเพื่อคัดลอกข้อมูล',
       allEndpoints: 'ทุกบริการ (แสดงทุกเส้น)',
+      noData: 'ไม่มีข้อมูลการวัดความหน่วงในช่วงเวลานี้',
       noData24h: 'ไม่มีข้อมูลการวัดความหน่วงในช่วง 24 ชั่วโมงที่ผ่านมา',
       hoursAgo24: '24 ชม. ที่แล้ว',
       hoursAgo12: '12 ชม. ที่แล้ว',
       now: 'ปัจจุบัน',
       copiedLatency: 'คัดลอกข้อมูลความหน่วง ({ms}ms เมื่อ {time}) แล้ว',
       clickToCopy: 'คลิกเพื่อคัดลอก',
+      liveBadge: 'สด (LIVE)',
+      updatedJustNow: 'อัปเดตล่าสุด',
+      range1h: '1 ชม.',
+      range6h: '6 ชม.',
+      range24h: '24 ชม.',
+      range7d: '7 วัน',
+      rangeLabel1h: '1 ชั่วโมงที่ผ่านมา',
+      rangeLabel6h: '6 ชั่วโมงที่ผ่านมา',
+      rangeLabel24h: '24 ชั่วโมงที่ผ่านมา',
+      rangeLabel7d: '7 วันที่ผ่านมา',
+      avg: 'เฉลี่ย',
+      p95: 'P95',
+      min: 'ต่ำสุด',
+      max: 'สูงสุด',
+      current: 'ล่าสุด',
     },
     pastIncidents: {
       title: 'เหตุขัดข้องที่ผ่านมา',
@@ -412,15 +446,32 @@ export const translations: Record<Language, Translations> = {
       noPingRecorded: 'No ping recorded',
     },
     chart: {
-      title: 'Response Time & Latency (24h)',
-      subtitle: 'Continuous multi-service latency measurements · (Click any point to copy)',
+      title: 'Response Time & Latency',
+      titleWithRange: 'Response Time & Latency ({range})',
+      subtitle: 'Continuous multi-service latency measurements · Hover to scrub points, click to copy diagnostic data',
       allEndpoints: 'All Endpoints (Multi-line)',
+      noData: 'No latency measurements recorded for this time range.',
       noData24h: 'No latency measurements recorded in the last 24 hours.',
       hoursAgo24: '24h ago',
       hoursAgo12: '12h ago',
       now: 'Now',
       copiedLatency: 'Copied latency data ({ms}ms at {time})',
       clickToCopy: 'Click to copy',
+      liveBadge: 'LIVE',
+      updatedJustNow: 'Updated just now',
+      range1h: '1h',
+      range6h: '6h',
+      range24h: '24h',
+      range7d: '7d',
+      rangeLabel1h: 'Last 1 Hour',
+      rangeLabel6h: 'Last 6 Hours',
+      rangeLabel24h: 'Last 24 Hours',
+      rangeLabel7d: 'Last 7 Days',
+      avg: 'Avg',
+      p95: 'P95',
+      min: 'Min',
+      max: 'Max',
+      current: 'Current',
     },
     pastIncidents: {
       title: 'Past Incidents',
