@@ -25,9 +25,30 @@ const TARGETS: TargetCheck[] = [
     },
   },
   {
-    id: 'model-qwen',
-    name: 'Model: Qwen 3.8 27B',
-    maxHealthyMs: 3500, // LLM tokenizer + GPU inference normal range: 0.3s - 3.5s
+    id: 'model-qwen-bf16',
+    name: 'Model: Qwen 3.8 27B (BF16)',
+    maxHealthyMs: 4000, // Full BF16 precision 256k context LLM inference
+    check: async (apiKey: string) => {
+      const res = await fetch("https://gateway.9arm.co/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "qwen3.8-27b",
+          messages: [{ role: "user", content: "hi" }],
+          max_tokens: 1,
+        }),
+      });
+      return { status: res.status, ok: res.status < 500 };
+    },
+  },
+  {
+    id: 'model-qwen-fp8',
+    name: 'Model: Qwen 3.8 27B (FP8)',
+    maxHealthyMs: 3500, // FP8 128k context LLM inference
     check: async (apiKey: string) => {
       const res = await fetch("https://gateway.9arm.co/v1/messages", {
         method: "POST",

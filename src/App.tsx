@@ -33,7 +33,8 @@ interface AppState {
 
 const MONITORED_SERVICES = [
   { id: 'gateway-http', name: 'API Gateway (HTTP / Models)' },
-  { id: 'model-qwen', name: 'Model: Qwen 3.8 27B' },
+  { id: 'model-qwen-bf16', name: 'Model: Qwen 3.8 27B (BF16)' },
+  { id: 'model-qwen-fp8', name: 'Model: Qwen 3.8 27B (FP8)' },
   // Temporarily disabled per 9arm announcement: "Deepseek will be disabled NOW... will return soon"
   // Ref: https://discord.com/channels/826099393694400574/1512469795218653417/1540781941148622928
   // { id: 'model-deepseek', name: 'Model: DeepSeek v4 Flash' },
@@ -236,7 +237,14 @@ function App() {
       await Promise.all(
         MONITORED_SERVICES.map(async (svc) => {
           try {
-            const { data } = await supabase.rpc('get_uptime_90_days', { target_endpoint: svc.name });
+            let { data } = await supabase.rpc('get_uptime_90_days', { target_endpoint: svc.name });
+            // Backward compatibility: if FP8 model has no data under the new name yet, fetch with legacy name
+            if ((!data || data.length === 0 || data.every((d: any) => d.status === 'no-data')) && svc.id === 'model-qwen-fp8') {
+              const legacyRes = await supabase.rpc('get_uptime_90_days', { target_endpoint: 'Model: Qwen 3.8 27B' });
+              if (legacyRes.data && Array.isArray(legacyRes.data) && legacyRes.data.some((d: any) => d.status !== 'no-data')) {
+                data = legacyRes.data;
+              }
+            }
             if (data && Array.isArray(data) && data.length > 0) {
               uptimeByComponent[svc.id] = data.map(parseUptimeRow);
             }
@@ -258,12 +266,22 @@ function App() {
         .order('created_at', { ascending: false })
         .limit(3000);
 
-      const latencyLogs: PingLog[] = latencyRows ? [...latencyRows].reverse() : [];
+      // Normalize legacy Qwen endpoint name to FP8 so historical latency graphs remain connected
+      const latencyLogs: PingLog[] = latencyRows
+        ? [...latencyRows].reverse().map(l => {
+            if (l.endpoint === 'Model: Qwen 3.8 27B') {
+              return { ...l, endpoint: 'Model: Qwen 3.8 27B (FP8)' };
+            }
+            return l;
+          })
+        : [];
 
       // 4. Build Multi-Component Status List
       const componentsData: ServiceComponent[] = MONITORED_SERVICES.map(svc => {
-        // Find most recent log for this endpoint
-        const latestLog = statusData?.find(l => l.endpoint === svc.name) || statusData?.[0];
+        // Find most recent log for this endpoint (with legacy alias fallback)
+        const latestLog = statusData?.find(l => l.endpoint === svc.name)
+          || (svc.id === 'model-qwen-fp8' ? statusData?.find(l => l.endpoint === 'Model: Qwen 3.8 27B') : undefined)
+          || statusData?.[0];
 
         let compStatus: ServiceComponent['status'] = 'operational';
         let compResponseTime = latestLog?.response_time_ms;

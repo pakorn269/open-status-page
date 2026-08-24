@@ -25,13 +25,15 @@ An open-source, community-run status monitor for **[gateway.9arm.co](https://gat
 - **"Subscribe to Updates" modal** — one-click Telegram subscription directly from the status header
 - **Multi-endpoint monitoring** — concurrently verifies:
   1. `API Gateway (HTTP / Models)` — HTTP proxy & model registry (`GET /v1/models`)
-  2. `Model: Qwen 3.8 27B` — inference pipeline on `qwen3.8-27b-fp8` (`POST /v1/messages`)
-  3. `Model: DeepSeek v4 Flash` — *(Temporarily disabled per 9arm testing announcement [ref: Discord message](https://discord.com/channels/826099393694400574/1512469795218653417/1540781941148622928); ready for re-activation)*
+  2. `Model: Qwen 3.8 27B (BF16)` — full precision 256k context inference on `qwen3.8-27b` (`POST /v1/messages`) [ref: Discord message](https://discord.com/channels/826099393694400574/1512469795218653417/1541061828715745402)
+  3. `Model: Qwen 3.8 27B (FP8)` — quantized 128k context inference on `qwen3.8-27b-fp8` (`POST /v1/messages`)
+  4. `Model: DeepSeek v4 Flash` — *(Temporarily disabled per 9arm testing announcement [ref: Discord message](https://discord.com/channels/826099393694400574/1512469795218653417/1540781941148622928); ready for re-activation)*
 - **288-entry granular check grid (Default)** — visualizes all 288 5-minute health check intervals over the past 24 hours to pinpoint exact intraday outage windows
 - **Click-to-Copy diagnostic JSON** — click any health check bar, daily block, or latency point to instantly copy formatted diagnostic JSON data
 - **Multi-color 24h response time chart** — continuous multi-line latency sparkline with individual color coding:
   - 🔵 **API Gateway** (`#3b82f6`)
-  - 🟣 **Model: Qwen 3.8 27B** (`#8b5cf6`)
+  - 🟣 **Model: Qwen 3.8 27B (BF16)** (`#8b5cf6`)
+  - 🔷 **Model: Qwen 3.8 27B (FP8)** (`#06b6d4`)
   - 🟡 **Model: DeepSeek v4 Flash** (`#f59e0b`)
 - **24-hour incident indicators** — live counter badges on the status banner, past incidents summary, and notification badge on tabs
 - **Functional pagination** — 14-day sliding window navigation for Past Incidents and quarterly 3-month navigation with boundary controls across Uptime and Incident history

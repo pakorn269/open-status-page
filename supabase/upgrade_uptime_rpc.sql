@@ -27,6 +27,7 @@ BEGIN
             target_endpoint IS NULL 
             OR endpoint = target_endpoint
             OR (target_endpoint = 'API Gateway (HTTP / Models)' AND endpoint IS NULL)
+            OR (target_endpoint = 'Model: Qwen 3.8 27B (FP8)' AND endpoint = 'Model: Qwen 3.8 27B')
           )
         GROUP BY DATE(created_at)
     )

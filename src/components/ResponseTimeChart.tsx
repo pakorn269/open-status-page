@@ -37,12 +37,26 @@ const ENDPOINT_COLORS: Record<string, EndpointColor> = {
     text: 'text-blue-600 dark:text-blue-400',
     badgeBg: 'bg-blue-50 dark:bg-blue-950/70 border-blue-200 dark:border-blue-800',
   },
-  'Model: Qwen 3.8 27B': {
+  'Model: Qwen 3.8 27B (BF16)': {
     stroke: '#8b5cf6', // Violet/Purple
     fillGradient: '#8b5cf6',
     bgDot: 'bg-purple-500',
     text: 'text-purple-600 dark:text-purple-400',
     badgeBg: 'bg-purple-50 dark:bg-purple-950/70 border-purple-200 dark:border-purple-800',
+  },
+  'Model: Qwen 3.8 27B (FP8)': {
+    stroke: '#06b6d4', // Cyan
+    fillGradient: '#06b6d4',
+    bgDot: 'bg-cyan-500',
+    text: 'text-cyan-600 dark:text-cyan-400',
+    badgeBg: 'bg-cyan-50 dark:bg-cyan-950/70 border-cyan-200 dark:border-cyan-800',
+  },
+  'Model: Qwen 3.8 27B': {
+    stroke: '#06b6d4', // Cyan (alias for legacy logs)
+    fillGradient: '#06b6d4',
+    bgDot: 'bg-cyan-500',
+    text: 'text-cyan-600 dark:text-cyan-400',
+    badgeBg: 'bg-cyan-50 dark:bg-cyan-950/70 border-cyan-200 dark:border-cyan-800',
   },
   'Model: DeepSeek v4 Flash': {
     stroke: '#f59e0b', // Amber/Orange

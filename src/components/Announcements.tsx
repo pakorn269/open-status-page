@@ -19,10 +19,23 @@ export interface ChangeEvent {
 
 export const SYSTEM_CHANGES: ChangeEvent[] = [
   {
+    id: 'qwen-bf16-launch',
+    date: '2026-08-23T19:29:00+07:00',
+    category: 'model_update',
+    isPinned: true,
+    titleEn: 'Qwen 3.8 27B Full Precision (BF16 / 256k Context) Launched',
+    titleTh: 'เปิดตัวโมเดล Qwen 3.8 27B เวอร์ชั่นเต็ม (BF16 / 256k Context)',
+    descEn: 'นายอาร์ม announced that the full precision Qwen 3.8 27B model (bf16 / 256k context window) is now available under model name "qwen3.8-27b". The previous "qwen3.8-27b-fp8" (fp8 / 128k context) remains fully operational.',
+    descTh: 'นายอาร์มได้เปิดให้บริการโมเดล Qwen 3.8 27B เวอร์ชั่นเต็ม (BF16 พร้อม 256k Context Window) ภายใต้ชื่อ "qwen3.8-27b" โดยโมเดลเดิม "qwen3.8-27b-fp8" (FP8 / 128k Context) ยังคงเปิดให้บริการตามปกติ',
+    refUrl: 'https://discord.com/channels/826099393694400574/1512469795218653417/1541061828715745402',
+    refLabelEn: 'Discord Announcement by 9ARM',
+    refLabelTh: 'ประกาศใน Discord โดย นายอาร์ม',
+  },
+  {
     id: 'deepseek-testing-end',
     date: '2026-08-23T00:57:00+07:00',
     category: 'model_update',
-    isPinned: true,
+    isPinned: false,
     titleEn: 'DeepSeek v4 Flash Testing Concluded (Temporarily Offline)',
     titleTh: 'ยุติช่วงทดสอบ DeepSeek v4 Flash ชั่วคราว',
     descEn: 'นายอาร์ม announced that DeepSeek v4 Flash testing has finished and the model is temporarily disabled. Status page health check probes for DeepSeek are paused to avoid false downtime alarms. The model will return soon.',
@@ -60,25 +73,25 @@ export const SYSTEM_CHANGES: ChangeEvent[] = [
 export const Announcements: React.FC = () => {
   const { t, language } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const latestPinned = SYSTEM_CHANGES.find(c => c.isPinned) || SYSTEM_CHANGES[0];
+
   const [isDismissed, setIsDismissed] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('announcement_deepseek_dismissed') === 'true';
+      return localStorage.getItem(`announcement_dismissed_${latestPinned.id}`) === 'true';
     }
     return false;
   });
 
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
 
-  const latestPinned = SYSTEM_CHANGES.find(c => c.isPinned) || SYSTEM_CHANGES[0];
-
   const handleDismiss = () => {
     setIsDismissed(true);
-    localStorage.setItem('announcement_deepseek_dismissed', 'true');
+    localStorage.setItem(`announcement_dismissed_${latestPinned.id}`, 'true');
   };
 
   const handleRestore = () => {
     setIsDismissed(false);
-    localStorage.removeItem('announcement_deepseek_dismissed');
+    localStorage.removeItem(`announcement_dismissed_${latestPinned.id}`);
   };
 
   const getCategoryBadge = (cat: ChangeEvent['category']) => {

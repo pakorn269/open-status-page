@@ -123,8 +123,12 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
     const map: Record<string, { entries: CheckEntry[]; uptime24h: string; countWithData: number }> = {};
 
     components.forEach(comp => {
-      // Filter logs for this component
-      let compLogs = recentLogs.filter(l => l.endpoint === comp.name);
+      // Filter logs for this component with backward-compatible alias matching
+      let compLogs = recentLogs.filter(l => {
+        if (l.endpoint === comp.name) return true;
+        if (comp.name === 'Model: Qwen 3.8 27B (FP8)' && l.endpoint === 'Model: Qwen 3.8 27B') return true;
+        return false;
+      });
       if (compLogs.length === 0 && components.length === 1) {
         compLogs = recentLogs;
       }
