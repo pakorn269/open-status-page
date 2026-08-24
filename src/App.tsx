@@ -33,7 +33,8 @@ interface AppState {
 const MONITORED_SERVICES = [
   { id: 'gateway-http', name: 'API Gateway (HTTP / Models)' },
   { id: 'model-qwen', name: 'Model: Qwen 3.8 27B' },
-  { id: 'model-deepseek', name: 'Model: DeepSeek v4 Flash' },
+  // Temporarily disabled per 9arm announcement: "Deepseek will be disabled NOW... will return soon"
+  // { id: 'model-deepseek', name: 'Model: DeepSeek v4 Flash' },
 ];
 
 // Skeleton block for loading state

@@ -45,27 +45,29 @@ const TARGETS: TargetCheck[] = [
       return { status: res.status, ok: res.status < 500 };
     },
   },
-  {
-    id: 'model-deepseek',
-    name: 'Model: DeepSeek v4 Flash',
-    maxHealthyMs: 3500, // LLM tokenizer + GPU inference normal range: 0.5s - 3.5s
-    check: async (apiKey: string) => {
-      const res = await fetch("https://gateway.9arm.co/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "deepseek-v4-flash-0731",
-          messages: [{ role: "user", content: "hi" }],
-          max_tokens: 5,
-        }),
-      });
-      return { status: res.status, ok: res.status < 500 };
-    },
-  },
+  // DeepSeek is temporarily disabled per 9arm announcement ("Deepseek will be disabled NOW... will return soon")
+  // Uncomment when DeepSeek is restored:
+  // {
+  //   id: 'model-deepseek',
+  //   name: 'Model: DeepSeek v4 Flash',
+  //   maxHealthyMs: 3500,
+  //   check: async (apiKey: string) => {
+  //     const res = await fetch("https://gateway.9arm.co/v1/messages", {
+  //       method: "POST",
+  //       headers: {
+  //         "x-api-key": apiKey,
+  //         "anthropic-version": "2023-06-01",
+  //         "content-type": "application/json",
+  //       },
+  //       body: JSON.stringify({
+  //         model: "deepseek-v4-flash-0731",
+  //         messages: [{ role: "user", content: "hi" }],
+  //         max_tokens: 5,
+  //       }),
+  //     });
+  //     return { status: res.status, ok: res.status < 500 };
+  //   },
+  // },
 ];
 
 function formatThaiDateTime(date = new Date()): string {
