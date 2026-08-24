@@ -46,6 +46,7 @@ const TARGETS: TargetCheck[] = [
     },
   },
   // DeepSeek is temporarily disabled per 9arm announcement ("Deepseek will be disabled NOW... will return soon")
+  // Ref: https://discord.com/channels/826099393694400574/1512469795218653417/1540781941148622928
   // Uncomment when DeepSeek is restored:
   // {
   //   id: 'model-deepseek',

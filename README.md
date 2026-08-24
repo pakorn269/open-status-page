@@ -25,7 +25,7 @@ An open-source, community-run status monitor for **[gateway.9arm.co](https://gat
 - **Multi-endpoint monitoring** — concurrently verifies:
   1. `API Gateway (HTTP / Models)` — HTTP proxy & model registry (`GET /v1/models`)
   2. `Model: Qwen 3.8 27B` — inference pipeline on `qwen3.8-27b-fp8` (`POST /v1/messages`)
-  3. `Model: DeepSeek v4 Flash` — *(Temporarily disabled per 9arm testing announcement; ready for re-activation)*
+  3. `Model: DeepSeek v4 Flash` — *(Temporarily disabled per 9arm testing announcement [ref: Discord message](https://discord.com/channels/826099393694400574/1512469795218653417/1540781941148622928); ready for re-activation)*
 - **288-entry granular check grid (Default)** — visualizes all 288 5-minute health check intervals over the past 24 hours to pinpoint exact intraday outage windows
 - **Click-to-Copy diagnostic JSON** — click any health check bar, daily block, or latency point to instantly copy formatted diagnostic JSON data
 - **Multi-color 24h response time chart** — continuous multi-line latency sparkline with individual color coding:

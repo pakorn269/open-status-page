@@ -34,6 +34,7 @@ const MONITORED_SERVICES = [
   { id: 'gateway-http', name: 'API Gateway (HTTP / Models)' },
   { id: 'model-qwen', name: 'Model: Qwen 3.8 27B' },
   // Temporarily disabled per 9arm announcement: "Deepseek will be disabled NOW... will return soon"
+  // Ref: https://discord.com/channels/826099393694400574/1512469795218653417/1540781941148622928
   // { id: 'model-deepseek', name: 'Model: DeepSeek v4 Flash' },
 ];
 
