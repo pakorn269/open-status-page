@@ -18,6 +18,7 @@ interface ResponseTimeChartProps {
   loading?: boolean;
   onTimeRangeChange?: (range: ChartTimeRange) => void;
   lastUpdated?: Date;
+  monitoredEndpoints?: string[];
 }
 
 interface EndpointColor {
@@ -110,6 +111,7 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({
   logs,
   loading = false,
   onTimeRangeChange,
+  monitoredEndpoints,
 }) => {
   const { t } = useTranslation();
   const [selectedEndpoint, setSelectedEndpoint] = useState<string>('all');
@@ -155,6 +157,12 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({
     }
   };
 
+  // Filter logs by active monitored endpoints
+  const scopedLogs = useMemo(() => {
+    if (!monitoredEndpoints || monitoredEndpoints.length === 0) return logs;
+    return logs.filter(l => !l.endpoint || monitoredEndpoints.includes(l.endpoint));
+  }, [logs, monitoredEndpoints]);
+
   // Compute duration in milliseconds for the selected time range
   const rangeDurationMs = useMemo(() => {
     switch (timeRange) {
@@ -174,8 +182,8 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({
   // Scalable Time Bounds: maxTime is ALWAYS anchored to the current moment / latest log
   const { minTime, maxTime } = useMemo(() => {
     const now = dayjs().valueOf();
-    const latestLogTime = logs.length > 0
-      ? Math.max(...logs.map(l => dayjs(l.created_at).valueOf()))
+    const latestLogTime = scopedLogs.length > 0
+      ? Math.max(...scopedLogs.map(l => dayjs(l.created_at).valueOf()))
       : now;
     
     const anchorNow = Math.max(now, latestLogTime);
@@ -185,28 +193,31 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({
       minTime: calculatedMin,
       maxTime: anchorNow,
     };
-  }, [logs, rangeDurationMs]);
+  }, [scopedLogs, rangeDurationMs]);
 
   // Filter logs within the active time range
   const filteredLogs = useMemo(() => {
-    return logs.filter(l => {
+    return scopedLogs.filter(l => {
       const time = dayjs(l.created_at).valueOf();
       return time >= minTime && time <= maxTime;
     });
-  }, [logs, minTime, maxTime]);
+  }, [scopedLogs, minTime, maxTime]);
 
   // Discover all unique endpoints
   const availableEndpoints = useMemo(() => {
+    if (monitoredEndpoints && monitoredEndpoints.length > 0) {
+      return monitoredEndpoints;
+    }
     const set = new Set<string>();
-    logs.forEach(l => {
+    scopedLogs.forEach(l => {
       if (l.endpoint) set.add(l.endpoint);
     });
     // Fallback if logs don't have endpoint tags
-    if (set.size === 0 && logs.length > 0) {
+    if (set.size === 0 && scopedLogs.length > 0) {
       set.add('API Gateway (HTTP / Models)');
     }
     return Array.from(set);
-  }, [logs]);
+  }, [scopedLogs, monitoredEndpoints]);
 
   // Group filtered logs by endpoint and sort ascending
   const seriesByEndpoint = useMemo(() => {

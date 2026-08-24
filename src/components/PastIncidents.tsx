@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import dayjs from 'dayjs';
-import { ChevronLeft, ChevronRight, RotateCcw, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RotateCcw, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import type { MonthIncidents, Incident } from './IncidentHistory';
 import { useTranslation } from '../lib/i18n';
 import { translateIncidentTitle, translateIncidentMessage, formatIncidentTimestamp } from '../lib/incidentTranslator';
@@ -16,9 +16,12 @@ export const PastIncidents: React.FC<PastIncidentsProps> = ({ months, incidentCo
 
   // Pagination state: page 0 = latest 14 days, page 1 = 14-27 days ago, etc.
   const [page, setPage] = useState<number>(0);
+  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
+
   const DAYS_PER_PAGE = 14;
   const MAX_DAYS = 90;
   const MAX_PAGES = Math.ceil(MAX_DAYS / DAYS_PER_PAGE); // 7 pages (90 days total)
+  const MAX_VISIBLE_PER_DAY = 3;
 
   const startOffset = page * DAYS_PER_PAGE;
   const daysInWindow = Math.min(DAYS_PER_PAGE, MAX_DAYS - startOffset);
@@ -29,6 +32,13 @@ export const PastIncidents: React.FC<PastIncidentsProps> = ({ months, incidentCo
 
   const newestDay = currentPeriodDays[0];
   const oldestDay = currentPeriodDays[currentPeriodDays.length - 1];
+
+  const toggleDayExpansion = (dayKey: string) => {
+    setExpandedDays(prev => ({
+      ...prev,
+      [dayKey]: !prev[dayKey],
+    }));
+  };
 
   const getImpactColor = (impact: Incident['impact']) => {
     switch (impact) {
@@ -64,7 +74,7 @@ export const PastIncidents: React.FC<PastIncidentsProps> = ({ months, incidentCo
   };
 
   return (
-    <div className="w-full mt-10">
+    <div id="past-incidents-section" className="w-full mt-10">
       {/* Header with Title, 24h Badge & Pagination Controls */}
       <div className="flex justify-between items-center mb-4 flex-wrap gap-3">
         <div className="flex items-center gap-3">
@@ -151,13 +161,24 @@ export const PastIncidents: React.FC<PastIncidentsProps> = ({ months, incidentCo
       {/* Day-by-day Incident Timeline */}
       <div className="flex flex-col gap-6">
         {currentPeriodDays.map((day, i) => {
+          const dayKey = day.format('YYYY-MM-DD');
           const dayIncidents = allIncidents.filter(inc => isIncidentOnDay(inc, day));
+          const isExpanded = expandedDays[dayKey] ?? false;
+          const visibleIncidents = isExpanded ? dayIncidents : dayIncidents.slice(0, MAX_VISIBLE_PER_DAY);
+          const hiddenCount = dayIncidents.length - MAX_VISIBLE_PER_DAY;
 
           return (
             <div key={i} className="flex flex-col">
-              <h4 className="text-[13px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide border-b border-gray-200 dark:border-gray-800 pb-2 mb-3">
-                {day.locale(language).format(language === 'th' ? 'D MMMM YYYY' : 'MMM D, YYYY')}
-              </h4>
+              <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-2 mb-3">
+                <h4 className="text-[13px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  {day.locale(language).format(language === 'th' ? 'D MMMM YYYY' : 'MMM D, YYYY')}
+                </h4>
+                {dayIncidents.length > 0 && (
+                  <span className="text-[11px] font-mono font-medium px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                    {dayIncidents.length} {dayIncidents.length === 1 ? 'incident' : 'incidents'}
+                  </span>
+                )}
+              </div>
 
               {dayIncidents.length === 0 ? (
                 <p className="text-[14px] text-gray-400 dark:text-gray-500 italic">
@@ -165,7 +186,7 @@ export const PastIncidents: React.FC<PastIncidentsProps> = ({ months, incidentCo
                 </p>
               ) : (
                 <div className="flex flex-col gap-4">
-                  {dayIncidents.map(incident => (
+                  {visibleIncidents.map(incident => (
                     <div key={incident.id} className="flex flex-col gap-1 pl-3 border-l-2 border-gray-200 dark:border-gray-700">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`text-[14px] font-medium ${getImpactColor(incident.impact)}`}>
@@ -183,6 +204,28 @@ export const PastIncidents: React.FC<PastIncidentsProps> = ({ months, incidentCo
                       </div>
                     </div>
                   ))}
+
+                  {/* Expand / Collapse Button if day has > 3 incidents */}
+                  {hiddenCount > 0 && (
+                    <div className="pl-3 mt-1">
+                      <button
+                        onClick={() => toggleDayExpansion(dayKey)}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 py-1.5 px-3 rounded-md bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/80 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors cursor-pointer shadow-2xs"
+                      >
+                        {isExpanded ? (
+                          <>
+                            <ChevronUp size={14} />
+                            <span>{t('pastIncidents.showFewerIncidents')}</span>
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown size={14} />
+                            <span>{t('pastIncidents.showMoreIncidents', { count: hiddenCount, total: dayIncidents.length })}</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -209,7 +252,8 @@ export const PastIncidents: React.FC<PastIncidentsProps> = ({ months, incidentCo
           <button
             onClick={() => {
               setPage(p => Math.min(MAX_PAGES - 1, p + 1));
-              window.scrollTo({ top: document.getElementById('past-incidents-section')?.offsetTop || 0, behavior: 'smooth' });
+              const el = document.getElementById('past-incidents-section');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
             }}
             disabled={page >= MAX_PAGES - 1}
             className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors flex items-center gap-1 ${
@@ -225,7 +269,8 @@ export const PastIncidents: React.FC<PastIncidentsProps> = ({ months, incidentCo
           <button
             onClick={() => {
               setPage(p => Math.max(0, p - 1));
-              window.scrollTo({ top: document.getElementById('past-incidents-section')?.offsetTop || 0, behavior: 'smooth' });
+              const el = document.getElementById('past-incidents-section');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
             }}
             disabled={page === 0}
             className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors flex items-center gap-1 ${

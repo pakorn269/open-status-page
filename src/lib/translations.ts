@@ -120,6 +120,8 @@ export interface Translations {
     todayBtn: string;
     pageOf: string;
     daysCount: string;
+    showMoreIncidents: string;
+    showFewerIncidents: string;
   };
   incidentHistory: {
     allComponents: string;
@@ -345,6 +347,8 @@ export const translations: Record<Language, Translations> = {
       todayBtn: 'ปัจจุบัน (14 วันล่าสุด)',
       pageOf: 'หน้า {current} จาก {total}',
       daysCount: '{count} วัน',
+      showMoreIncidents: '+ แสดงเหตุการณ์เพิ่มเติมอีก {count} รายการ (ทั้งหมด {total} รายการ)',
+      showFewerIncidents: '- ย่อแสดงเฉพาะ 3 รายการล่าสุด',
     },
     incidentHistory: {
       allComponents: 'ทุกบริการ / คอมโพเนนต์',
@@ -568,6 +572,8 @@ export const translations: Record<Language, Translations> = {
       todayBtn: 'Today (Latest 14 days)',
       pageOf: 'Page {current} of {total}',
       daysCount: '{count} days',
+      showMoreIncidents: '+ Show {count} more incidents (Total {total})',
+      showFewerIncidents: '- Show fewer incidents',
     },
     incidentHistory: {
       allComponents: 'All Components',

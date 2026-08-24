@@ -437,6 +437,7 @@ function App() {
                 />
                 <ResponseTimeChart
                   logs={state.latencyLogs}
+                  monitoredEndpoints={MONITORED_SERVICES.map(s => s.name)}
                   lastUpdated={state.lastRefreshed}
                 />
                 <PastIncidents
