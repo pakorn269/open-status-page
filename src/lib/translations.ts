@@ -87,12 +87,39 @@ export interface Translations {
     max: string;
     current: string;
   };
+  announcements: {
+    title: string;
+    badgeNotice: string;
+    badgeModelUpdate: string;
+    badgeMaintenance: string;
+    badgeFeature: string;
+    viewHistoryBtn: string;
+    discordRefBtn: string;
+    dismiss: string;
+    showNotice: string;
+    latestNoticeTitle: string;
+    latestNoticeDesc: string;
+    modelOfflineNote: string;
+  };
+  changeHistory: {
+    modalTitle: string;
+    modalSubtitle: string;
+    allChanges: string;
+    filterLabel: string;
+    closeBtn: string;
+    referenceLink: string;
+  };
   pastIncidents: {
     title: string;
     zeroIncidents24h: string;
     incidentsCount24h: string;
     noIncidentsReported: string;
     viewFullHistory: string;
+    prevPeriod: string;
+    nextPeriod: string;
+    todayBtn: string;
+    pageOf: string;
+    daysCount: string;
   };
   incidentHistory: {
     allComponents: string;
@@ -285,12 +312,39 @@ export const translations: Record<Language, Translations> = {
       max: 'สูงสุด',
       current: 'ล่าสุด',
     },
+    announcements: {
+      title: 'ประกาศและการเปลี่ยนแปลงระบบ',
+      badgeNotice: 'ประกาศสำคัญ',
+      badgeModelUpdate: 'อัปเดตโมเดล',
+      badgeMaintenance: 'ปิดปรับปรุง',
+      badgeFeature: 'ฟีเจอร์ใหม่',
+      viewHistoryBtn: 'ประวัติการเปลี่ยนแปลง',
+      discordRefBtn: 'ดูประกาศใน Discord',
+      dismiss: 'ซ่อนประกาศ',
+      showNotice: '📢 ดูประกาศล่าสุด (DeepSeek)',
+      latestNoticeTitle: 'โมเดล DeepSeek v4 Flash ยุติช่วงทดสอบชั่วคราว',
+      latestNoticeDesc: 'นายอาร์มได้ประกาศสิ้นสุดช่วงทดสอบโมเดล DeepSeek v4 Flash ชั่วคราว และจะกลับมาเปิดใหม่อีกครั้งในเร็วๆ นี้ ระบบสถานะได้หยุดตรวจเช็คโมเดลดังกล่าวชั่วคราวเพื่อป้องกันการแจ้งเตือนผิดพลาด',
+      modelOfflineNote: 'โมเดลนี้ออฟไลน์ชั่วคราว (ระบบหยุดการ Ping เพื่อไม่ให้เกิด False Outage)',
+    },
+    changeHistory: {
+      modalTitle: 'ประวัติการเปลี่ยนแปลงและการอัปเดต (Change History)',
+      modalSubtitle: 'บันทึกประวัติการเพิ่ม-ลดโมเดล การปรับปรุงประสิทธิภาพ และการอัปเดตระบบ Gateway 9arm',
+      allChanges: 'รายการอัปเดตทั้งหมด',
+      filterLabel: 'กรองตามประเภท:',
+      closeBtn: 'ปิดหน้าต่าง',
+      referenceLink: 'ลิงก์อ้างอิงประกาศ',
+    },
     pastIncidents: {
       title: 'เหตุขัดข้องที่ผ่านมา',
       zeroIncidents24h: 'ไม่มีเหตุขัดข้องใน 24 ชั่วโมงที่ผ่านมา',
       incidentsCount24h: '{count} เหตุขัดข้องใน 24 ชั่วโมงที่ผ่านมา',
-      noIncidentsReported: 'ไม่มีรายงานเหตุขัดข้อง',
+      noIncidentsReported: 'ไม่มีรายงานเหตุขัดข้องในช่วงเวลานี้',
       viewFullHistory: '← ดูประวัติเหตุขัดข้องทั้งหมด',
+      prevPeriod: 'ช่วงก่อนหน้า (14 วัน)',
+      nextPeriod: 'ช่วงถัดไป (14 วัน)',
+      todayBtn: 'ปัจจุบัน (14 วันล่าสุด)',
+      pageOf: 'หน้า {current} จาก {total}',
+      daysCount: '{count} วัน',
     },
     incidentHistory: {
       allComponents: 'ทุกบริการ / คอมโพเนนต์',
@@ -481,12 +535,39 @@ export const translations: Record<Language, Translations> = {
       max: 'Max',
       current: 'Current',
     },
+    announcements: {
+      title: 'System Announcements & Updates',
+      badgeNotice: 'Notice',
+      badgeModelUpdate: 'Model Update',
+      badgeMaintenance: 'Maintenance',
+      badgeFeature: 'New Feature',
+      viewHistoryBtn: 'Change History',
+      discordRefBtn: 'View Discord Announcement',
+      dismiss: 'Dismiss',
+      showNotice: '📢 View Latest Announcement (DeepSeek)',
+      latestNoticeTitle: 'DeepSeek v4 Flash Testing Phase Concluded',
+      latestNoticeDesc: '9arm announced that the DeepSeek v4 Flash testing period has concluded and is temporarily offline. Automated health checks for this model are paused to prevent false downtime alarms until it returns.',
+      modelOfflineNote: 'Model is temporarily offline (health check pings paused to prevent false outage alerts)',
+    },
+    changeHistory: {
+      modalTitle: 'Change History & System Updates',
+      modalSubtitle: 'Complete timeline of model availability, infrastructure changes, and gateway announcements',
+      allChanges: 'All System Changes',
+      filterLabel: 'Filter by category:',
+      closeBtn: 'Close',
+      referenceLink: 'Official Reference',
+    },
     pastIncidents: {
       title: 'Past Incidents',
       zeroIncidents24h: '0 incidents in past 24 hours',
       incidentsCount24h: '{count} incident{s} in past 24 hours',
-      noIncidentsReported: 'No incidents reported.',
+      noIncidentsReported: 'No incidents reported in this period.',
       viewFullHistory: '← View full incident history',
+      prevPeriod: 'Previous (14 days)',
+      nextPeriod: 'Next (14 days)',
+      todayBtn: 'Today (Latest 14 days)',
+      pageOf: 'Page {current} of {total}',
+      daysCount: '{count} days',
     },
     incidentHistory: {
       allComponents: 'All Components',

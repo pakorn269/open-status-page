@@ -20,6 +20,7 @@ An open-source, community-run status monitor for **[gateway.9arm.co](https://gat
 
 ## ✨ Features
 
+- **System announcements & change history** — contextual notice banners and a chronological changelog modal tracking upstream model availability (e.g. DeepSeek testing conclusion) with direct Discord links
 - **Telegram broadcast channel (Thai)** — instant outage, elevated latency, and recovery notifications via [**@gateway9armstatus**](https://t.me/gateway9armstatus) (powered by `@th9arm_bot`)
 - **"Subscribe to Updates" modal** — one-click Telegram subscription directly from the status header
 - **Multi-endpoint monitoring** — concurrently verifies:
@@ -33,7 +34,7 @@ An open-source, community-run status monitor for **[gateway.9arm.co](https://gat
   - 🟣 **Model: Qwen 3.8 27B** (`#8b5cf6`)
   - 🟡 **Model: DeepSeek v4 Flash** (`#f59e0b`)
 - **24-hour incident indicators** — live counter badges on the status banner, past incidents summary, and notification badge on tabs
-- **Functional pagination** — quarterly 3-month navigation with boundary controls across Uptime and Incident history
+- **Functional pagination** — 14-day sliding window navigation for Past Incidents and quarterly 3-month navigation with boundary controls across Uptime and Incident history
 - **Component & Impact filtering** — filter incidents by specific service and severity level (`Critical`, `Major`, `Minor`, `Informational`) with quick reset
 - **Automated incident lifecycle** — auto-creates incidents on hard outages/severe latency and auto-resolves when services normalize
 - **Admin portal (`/admin`)** — post, edit, resolve, and delete incidents directly from the web UI (authenticated via Supabase Service Role Key)
@@ -190,13 +191,14 @@ open-status-page/
 ├── src/
 │   ├── components/
 │   │   ├── Header.tsx               # Logo + Language Switcher + Subscribe + GitHub + Dark Mode
+│   │   ├── Announcements.tsx        # Contextual notice banner & Change History modal
 │   │   ├── SubscribeModal.tsx       # Telegram subscription modal (@gateway9armstatus)
 │   │   ├── StatusBanner.tsx         # Animated status indicator with 24h incident badge
 │   │   ├── ComponentList.tsx        # Multi-service list + 288-check grid & click-to-copy
 │   │   ├── ResponseTimeChart.tsx    # Multi-color 24h latency chart with endpoint filter tabs
 │   │   ├── UptimeGrid.tsx           # 90-day calendar uptime grid with service selector
 │   │   ├── IncidentHistory.tsx      # Full incident log with component & impact filters
-│   │   ├── PastIncidents.tsx        # 14-day incident summary with 24h counter badge
+│   │   ├── PastIncidents.tsx        # 14-day sliding pagination summary with 24h counter badge
 │   │   ├── Footer.tsx               # 9arm community hubs & open-source credits
 │   │   └── AdminPanel.tsx           # Secure incident management portal (/admin)
 │   ├── lib/

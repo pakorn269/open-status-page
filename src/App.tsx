@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Header } from './components/Header';
 import { StatusBanner } from './components/StatusBanner';
+import { Announcements } from './components/Announcements';
 import { UptimeGrid } from './components/UptimeGrid';
 import { IncidentHistory } from './components/IncidentHistory';
 import { ComponentList } from './components/ComponentList';
@@ -429,6 +430,7 @@ function App() {
                   responseTimeMs={state.responseTimeMs}
                   incidentCount24h={state.incidentCount24h}
                 />
+                <Announcements />
                 <ComponentList
                   components={state.componentsData}
                   recentLogs={state.latencyLogs}
