@@ -19,10 +19,23 @@ export interface ChangeEvent {
 
 export const SYSTEM_CHANGES: ChangeEvent[] = [
   {
+    id: 'qwen-bf16-testing-end',
+    date: '2026-08-25T09:00:00+07:00',
+    category: 'model_update',
+    isPinned: true,
+    titleEn: 'Qwen 3.8 27B (BF16) Testing Concluded (FP8 Remains Operational)',
+    titleTh: 'ยุติช่วงทดสอบ Qwen 3.8 27B (BF16) ชั่วคราว (โมเดล FP8 ยังใช้งานได้ปกติ)',
+    descEn: 'นายอาร์ม announced that the testing period for qwen3.8-27b (BF16 256k context) concluded at 09:00 today. The standard qwen3.8-27b-fp8 (FP8 128k context) and API Gateway remain fully operational. Automated health checks for the BF16 model are paused to prevent false downtime alarms.',
+    descTh: 'นายอาร์มได้ประกาศปิดการทดสอบโมเดล qwen3.8-27b (BF16 256k context) เมื่อเวลา 09:00 น. วันนี้ โดยโมเดลเดิม qwen3.8-27b-fp8 (FP8 128k context) และ API Gateway ยังคงเปิดให้บริการตามปกติ ระบบได้หยุดตรวจสอบโมเดล BF16 ชั่วคราวเพื่อป้องกันการแจ้งเตือนระบบขัดข้องผิดพลาด',
+    refUrl: 'https://discord.com/channels/826099393694400574/1512469795218653417/1541558041692872745',
+    refLabelEn: 'Discord Announcement by 9ARM',
+    refLabelTh: 'ประกาศใน Discord โดย นายอาร์ม',
+  },
+  {
     id: 'qwen-bf16-launch',
     date: '2026-08-23T19:29:00+07:00',
     category: 'model_update',
-    isPinned: true,
+    isPinned: false,
     titleEn: 'Qwen 3.8 27B Full Precision (BF16 / 256k Context) Launched',
     titleTh: 'เปิดตัวโมเดล Qwen 3.8 27B เวอร์ชั่นเต็ม (BF16 / 256k Context)',
     descEn: 'นายอาร์ม announced that the full precision Qwen 3.8 27B model (bf16 / 256k context window) is now available under model name "qwen3.8-27b". The previous "qwen3.8-27b-fp8" (fp8 / 128k context) remains fully operational.',

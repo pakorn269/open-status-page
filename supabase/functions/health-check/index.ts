@@ -24,27 +24,30 @@ const TARGETS: TargetCheck[] = [
       return { status: res.status, ok: res.status < 500 };
     },
   },
-  {
-    id: 'model-qwen-bf16',
-    name: 'Model: Qwen 3.8 27B (BF16)',
-    maxHealthyMs: 4000, // Full BF16 precision 256k context LLM inference
-    check: async (apiKey: string) => {
-      const res = await fetch("https://gateway.9arm.co/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "qwen3.8-27b",
-          messages: [{ role: "user", content: "hi" }],
-          max_tokens: 1,
-        }),
-      });
-      return { status: res.status, ok: res.status < 500 };
-    },
-  },
+  // Qwen 3.8 27B (BF16) is temporarily disabled per 9arm testing conclusion announcement (at 09:00 today)
+  // Ref: https://discord.com/channels/826099393694400574/1512469795218653417/1541558041692872745
+  // Uncomment when BF16 model testing resumes:
+  // {
+  //   id: 'model-qwen-bf16',
+  //   name: 'Model: Qwen 3.8 27B (BF16)',
+  //   maxHealthyMs: 4000, // Full BF16 precision 256k context LLM inference
+  //   check: async (apiKey: string) => {
+  //     const res = await fetch("https://gateway.9arm.co/v1/messages", {
+  //       method: "POST",
+  //       headers: {
+  //         "x-api-key": apiKey,
+  //         "anthropic-version": "2023-06-01",
+  //         "content-type": "application/json",
+  //       },
+  //       body: JSON.stringify({
+  //         model: "qwen3.8-27b",
+  //         messages: [{ role: "user", content: "hi" }],
+  //         max_tokens: 1,
+  //       }),
+  //     });
+  //     return { status: res.status, ok: res.status < 500 };
+  //   },
+  // },
   {
     id: 'model-qwen-fp8',
     name: 'Model: Qwen 3.8 27B (FP8)',

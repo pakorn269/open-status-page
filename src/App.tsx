@@ -33,7 +33,9 @@ interface AppState {
 
 const MONITORED_SERVICES = [
   { id: 'gateway-http', name: 'API Gateway (HTTP / Models)' },
-  { id: 'model-qwen-bf16', name: 'Model: Qwen 3.8 27B (BF16)' },
+  // Temporarily disabled per 9arm announcement: testing ended at 09:00 today
+  // Ref: https://discord.com/channels/826099393694400574/1512469795218653417/1541558041692872745
+  // { id: 'model-qwen-bf16', name: 'Model: Qwen 3.8 27B (BF16)' },
   { id: 'model-qwen-fp8', name: 'Model: Qwen 3.8 27B (FP8)' },
   // Temporarily disabled per 9arm announcement: "Deepseek will be disabled NOW... will return soon"
   // Ref: https://discord.com/channels/826099393694400574/1512469795218653417/1540781941148622928
