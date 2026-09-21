@@ -81,7 +81,12 @@ export const UsageLimitsTab: React.FC<UsageLimitsTabProps> = ({
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Header Banner */}
+      {/* 1. Personal User API Key Quota Checker (Priority #1 Hero Section) */}
+      <div id="personal-quota-checker" className="scroll-mt-6">
+        <UserQuotaChecker />
+      </div>
+
+      {/* 2. System Baseline Header Banner */}
       <div className={`p-6 rounded-2xl border transition-all ${
         telemetry.isRateLimited
           ? 'bg-amber-50/80 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800/80 shadow-md shadow-amber-500/5'
@@ -123,6 +128,25 @@ export const UsageLimitsTab: React.FC<UsageLimitsTabProps> = ({
             <span>{dayjs(lastRefreshed).format('HH:mm:ss')}</span>
           </div>
         </div>
+
+        {/* System Baseline Notice Callout */}
+        <div className="mt-4 pt-3.5 border-t border-gray-100 dark:border-gray-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-start sm:items-center gap-2 text-gray-600 dark:text-gray-300">
+            <span className="inline-flex items-center gap-1 font-semibold text-indigo-600 dark:text-indigo-400 shrink-0">
+              <ShieldCheck size={14} />
+              {t('usageLimits.systemBadge')}:
+            </span>
+            <span>
+              {t('usageLimits.systemNotice')}
+            </span>
+          </div>
+          <a
+            href="#personal-quota-checker"
+            className="inline-flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors shrink-0"
+          >
+            {t('usageLimits.jumpToPersonalChecker')}
+          </a>
+        </div>
       </div>
 
       {/* 3 Main Metric Cards with X% Remaining Gauges */}
@@ -151,7 +175,7 @@ export const UsageLimitsTab: React.FC<UsageLimitsTabProps> = ({
                 {telemetry.remainingParallel}
               </span>
               <span className="text-sm text-gray-500 dark:text-gray-400 font-mono">
-                / {telemetry.maxParallel} slots free
+                / {telemetry.maxParallel} slots
               </span>
             </div>
 
@@ -160,26 +184,25 @@ export const UsageLimitsTab: React.FC<UsageLimitsTabProps> = ({
             </p>
           </div>
 
-          {/* Slot visual display */}
+          {/* Slots indicator pills */}
           <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
-            <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 mb-2">
+            <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 mb-2 font-mono">
               <span>{t('usageLimits.capacity')}</span>
-              <span className="font-mono font-semibold text-gray-700 dark:text-gray-300">
+              <span className="font-semibold text-gray-700 dark:text-gray-300">
                 {t('usageLimits.freeSlots', { free: telemetry.remainingParallel, max: telemetry.maxParallel })}
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {Array.from({ length: telemetry.maxParallel }).map((_, idx) => {
-                const isOccupied = idx < telemetry.parallelInUse;
+                const isFree = idx < telemetry.remainingParallel;
                 return (
                   <div
                     key={idx}
-                    className={`h-3 rounded-md transition-all ${
-                      isOccupied
-                        ? 'bg-amber-500 shadow-xs shadow-amber-500/20'
-                        : 'bg-emerald-500/20 dark:bg-emerald-500/30 border border-emerald-500/40'
+                    className={`h-2.5 rounded-full transition-all duration-300 ${
+                      isFree
+                        ? 'bg-emerald-500 shadow-xs shadow-emerald-500/20'
+                        : 'bg-amber-500 animate-pulse'
                     }`}
-                    title={isOccupied ? `Slot ${idx + 1}: In Use` : `Slot ${idx + 1}: Available`}
                   />
                 );
               })}
@@ -192,7 +215,7 @@ export const UsageLimitsTab: React.FC<UsageLimitsTabProps> = ({
           </div>
         </div>
 
-        {/* Metric 2: Token Quota (TPM) */}
+        {/* Metric 2: TPM Token Limit */}
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between gap-2 mb-3">
@@ -201,9 +224,9 @@ export const UsageLimitsTab: React.FC<UsageLimitsTabProps> = ({
                 <span>{t('usageLimits.tokensTitle')}</span>
               </div>
               <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
-                telemetry.tokenPctRemaining > 20
+                telemetry.tokenPctRemaining > 30
                   ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/60'
-                  : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/60'
+                  : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60'
               }`}>
                 {telemetry.tokenPctRemaining}% {t('usageLimits.remaining')}
               </span>
@@ -211,10 +234,10 @@ export const UsageLimitsTab: React.FC<UsageLimitsTabProps> = ({
 
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 font-mono tracking-tight">
-                {(telemetry.remainingTokens / 1000).toFixed(0)}k
+                {((telemetry.remainingTokens) / 1000).toFixed(0)}k
               </span>
               <span className="text-sm text-gray-500 dark:text-gray-400 font-mono">
-                / {(telemetry.tokenLimit / 1000).toFixed(0)}k TPM
+                / {((telemetry.tokenLimit) / 1000).toFixed(0)}k TPM
               </span>
             </div>
 
@@ -223,11 +246,13 @@ export const UsageLimitsTab: React.FC<UsageLimitsTabProps> = ({
             </p>
           </div>
 
-          {/* Progress bar */}
+          {/* Tokens progress bar */}
           <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
             <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 mb-2 font-mono">
               <span>{t('usageLimits.remaining')}: {telemetry.remainingTokens.toLocaleString()} tokens</span>
-              <span className="font-semibold text-gray-700 dark:text-gray-300">{telemetry.tokenPctRemaining}%</span>
+              <span className="font-semibold text-gray-700 dark:text-gray-300">
+                {telemetry.tokenPctRemaining}%
+              </span>
             </div>
             <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 overflow-hidden p-0.5">
               <div 
@@ -290,9 +315,6 @@ export const UsageLimitsTab: React.FC<UsageLimitsTabProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Personal User API Key Quota Checker */}
-      <UserQuotaChecker />
 
       {/* Per-Model Quota Breakdown */}
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 shadow-xs">

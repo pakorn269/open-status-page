@@ -19,10 +19,23 @@ export interface ChangeEvent {
 
 export const SYSTEM_CHANGES: ChangeEvent[] = [
   {
+    id: 'personal-quota-checker-launch',
+    date: '2026-09-21T13:30:00+07:00',
+    category: 'feature',
+    isPinned: true,
+    titleEn: 'Personal API Key Quota Checker Launched (Zero-Knowledge)',
+    titleTh: 'ขอเชิญทดลองใช้งาน: ตรวจสอบโควตา API Key ส่วนบุคคล (Zero-Knowledge)',
+    descEn: 'Community members can now inspect their personal API key concurrency slots (3/3), TPM token headroom (1M TPM), and monthly spend balance ($50/mo) in real-time via the "Usage & Limits" tab. 100% Zero-Knowledge & privacy-preserving: API keys are never stored anywhere.',
+    descTh: 'ขอเชิญเพื่อนๆ สมาชิกชุมชนทดลองใช้งานระบบตรวจสอบโควตา API Key ส่วนบุคคล! สามารถตรวจสอบสถานะ Concurrency (3 คำขอพร้อมกัน), โควตาโทเค็น (1,000,000 TPM) และวงเงินคงเหลือ ($50/เดือน) ของ Key ตัวเองได้แบบเรียลไทม์ผ่านแท็บ "โควตา & ขีดจำกัด" โดยระบบเป็น Zero-Knowledge 100% ปลอดภัย ไม่มีการบันทึก Key ใดๆ ทั้งสิ้น พร้อม Dialog แสดงผลและคำสั่ง cURL สำหรับทดสอบในเครื่อง',
+    refUrl: '#personal-quota-checker',
+    refLabelEn: 'Try Personal Quota Checker',
+    refLabelTh: 'ลองใช้งานตรวจสอบโควตาส่วนบุคคล',
+  },
+  {
     id: 'qwen-bf16-testing-end',
     date: '2026-08-25T09:00:00+07:00',
     category: 'model_update',
-    isPinned: true,
+    isPinned: false,
     titleEn: 'Qwen 3.8 27B (BF16) Testing Concluded (FP8 Remains Operational)',
     titleTh: 'ยุติช่วงทดสอบ Qwen 3.8 27B (BF16) ชั่วคราว (โมเดล FP8 ยังใช้งานได้ปกติ)',
     descEn: 'นายอาร์ม announced that the testing period for qwen3.8-27b (BF16 256k context) concluded at 09:00 today. The standard qwen3.8-27b-fp8 (FP8 128k context) and API Gateway remain fully operational. Automated health checks for the BF16 model are paused to prevent false downtime alarms.',
@@ -96,6 +109,14 @@ export const Announcements: React.FC = () => {
   });
 
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
+
+  const handleRefClick = (e: React.MouseEvent, url?: string) => {
+    if (url && url.startsWith('#')) {
+      e.preventDefault();
+      window.location.hash = url;
+      setIsModalOpen(false);
+    }
+  };
 
   const handleDismiss = () => {
     setIsDismissed(true);
@@ -171,12 +192,17 @@ export const Announcements: React.FC = () => {
                   {latestPinned.refUrl && (
                     <a
                       href={latestPinned.refUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                      target={latestPinned.refUrl.startsWith('#') ? undefined : '_blank'}
+                      rel={latestPinned.refUrl.startsWith('#') ? undefined : 'noopener noreferrer'}
+                      onClick={(e) => handleRefClick(e, latestPinned.refUrl)}
+                      className="inline-flex items-center gap-1 font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors cursor-pointer"
                     >
                       <ExternalLink size={13} />
-                      <span>{t('announcements.discordRefBtn')}</span>
+                      <span>
+                        {language === 'th'
+                          ? (latestPinned.refLabelTh || t('announcements.discordRefBtn'))
+                          : (latestPinned.refLabelEn || t('announcements.discordRefBtn'))}
+                      </span>
                     </a>
                   )}
 
@@ -310,9 +336,10 @@ export const Announcements: React.FC = () => {
                       {change.refUrl && (
                         <a
                           href={change.refUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                          target={change.refUrl.startsWith('#') ? undefined : '_blank'}
+                          rel={change.refUrl.startsWith('#') ? undefined : 'noopener noreferrer'}
+                          onClick={(e) => handleRefClick(e, change.refUrl)}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                         >
                           <ExternalLink size={12} />
                           <span>{language === 'th' ? (change.refLabelTh || t('changeHistory.referenceLink')) : (change.refLabelEn || t('changeHistory.referenceLink'))}</span>

@@ -84,6 +84,9 @@ export interface Translations {
   usageLimits: {
     title: string;
     subtitle: string;
+    systemBadge: string;
+    systemNotice: string;
+    jumpToPersonalChecker: string;
     allNormal: string;
     throttledNotice: string;
     concurrencyTitle: string;
@@ -113,6 +116,8 @@ export interface Translations {
   userQuotaChecker: {
     title: string;
     subtitle: string;
+    personalBadge: string;
+    personalNotice: string;
     securityBadge: string;
     securityDisclaimer: string;
     inputLabel: string;
@@ -120,6 +125,13 @@ export interface Translations {
     checkBtn: string;
     checkingBtn: string;
     clearBtn: string;
+    viewModalBtn: string;
+    closeModalBtn: string;
+    recheckBtn: string;
+    copySummaryBtn: string;
+    copiedSummary: string;
+    modalTitle: string;
+    modalSubtitle: string;
     curlTab: string;
     curlDesc: string;
     curlCopied: string;
@@ -406,15 +418,18 @@ export const translations: Record<Language, Translations> = {
       viewFaqBtn: 'ทำความเข้าใจ Limit & วิธีแก้ (FAQ) ↓',
     },
     usageLimits: {
-      title: 'โควตาและการจำกัดสิทธิ์ (Usage & Rate Limits)',
-      subtitle: 'ติดตามเพดานการใช้งาน (Per-Key Tier Cap) และอัตราคงเหลือแบบเรียลไทม์จาก Gateway Response Headers',
+      title: 'โควตาและการจำกัดสิทธิ์ของระบบหลัก (System Usage & Rate Limits)',
+      subtitle: 'ติดตามเพดานการใช้งานมาตรฐาน (Account Tier Cap) จากการทดสอบด้วย Test Key ของระบบตรวจวัดสถานะ',
+      systemBadge: 'ระบบตรวจวัดส่วนกลาง (Status Monitor Test Key)',
+      systemNotice: 'ข้อมูลชุดนี้แสดงตัวอย่างขีดจำกัดมาตรฐานของ Tier และยอดใช้จ่ายสะสมของ "บอทตรวจวัดสถานะ" เท่านั้น ไม่ใช่ข้อมูลของบัญชีส่วนบุคคลของคุณ หากต้องการตรวจเช็ค Key ส่วนตัวของคุณเอง กรุณาใช้เครื่องมือด้านบน',
+      jumpToPersonalChecker: 'ไปที่ตัวตรวจเช็คโควตาส่วนบุคคล ↑',
       allNormal: 'อัตราการใช้งานปกติ — ไม่พบการจำกัดคำขอ',
       throttledNotice: 'ตรวจพบการจำกัดคำขอ (HTTP 429) — เกตเวย์กำลังหน่วงคำขอชั่วคราว',
-      concurrencyTitle: 'คำขอพร้อมกัน (Concurrency)',
+      concurrencyTitle: 'คำขอพร้อมกัน (Concurrency - Test Probe)',
       concurrencyDesc: 'ความจุการรับส่งคำขอประมวลผลพร้อมกันในเสี้ยววินาที (ว่างทันทีที่ประมวลผลเสร็จ)',
-      tokensTitle: 'โควตาโทเค็นต่อนาที (TPM)',
+      tokensTitle: 'โควตาโทเค็นต่อนาที (TPM - Test Probe)',
       tokensDesc: 'เพดานปริมาณโทเค็นรวมต่อ 1 นาที (รีเซ็ตใหม่ทุกๆ 60 วินาที)',
-      budgetTitle: 'วงเงินทดสอบสะสม (Key Budget)',
+      budgetTitle: 'วงเงินทดสอบสะสมของบอทมอนิเตอร์ (Monitor Probe Budget)',
       budgetDesc: 'งบประมาณสะสมของ API Key ประจำบอทมอนิเตอร์ในรอบเดือน ($50/เดือน)',
       remaining: 'คงเหลือ',
       used: 'ใช้ไปแล้ว',
@@ -435,8 +450,10 @@ export const translations: Record<Language, Translations> = {
       quickSwitchFaq: 'อ่านคำถามที่พบบ่อย (FAQ) ด้านล่าง ↓',
     },
     userQuotaChecker: {
-      title: 'ตรวจสอบโควตา API Key ของคุณ (Personal Quota Checker)',
-      subtitle: 'ใส่ API Key ของคุณเพื่อตรวจสอบสถานะ Concurrency, โควตา Tokens (TPM) และวงเงินคงเหลือส่วนบุคคลแบบเรียลไทม์',
+      title: 'ตรวจสอบโควตา API Key ส่วนบุคคล (Personal Quota Checker)',
+      subtitle: 'ใส่ API Key ของคุณเพื่อตรวจสอบสถานะ Concurrency, โควตา Tokens (TPM) และวงเงินคงเหลือส่วนบุคคลแบบเรียลไทม์ (แยกจากระบบหลัก 100%)',
+      personalBadge: 'โควตาส่วนบุคคล (Your Personal API Key)',
+      personalNotice: 'เครื่องมือนี้ประมวลผลและแสดงผลลัพธ์เฉพาะสำหรับ "API Key ส่วนตัวของคุณ" เท่านั้น โดยแยกต่างหากจากข้อมูลสุ่มตรวจของระบบมอนิเตอร์ด้านบน 100%',
       securityBadge: 'Zero-Knowledge 100%',
       securityDisclaimer: 'ปลอดภัยสูงสุด: ระบบไม่บันทึก API Key ของคุณลงฐานข้อมูลหรือ Disk ใดๆ ทั้งสิ้น คำขอจะถูกส่งผ่าน HTTPS ตรงไปยังเกตเวย์เพื่ออ่านเฉพาะตัวเลขโควตาจาก Response Headers เท่านั้น และถูกทำลายจากหน่วยความจำทันที',
       inputLabel: '9ARM Gateway API Key',
@@ -444,6 +461,13 @@ export const translations: Record<Language, Translations> = {
       checkBtn: 'ตรวจสอบโควตา',
       checkingBtn: 'กำลังตรวจสอบ...',
       clearBtn: 'ล้างข้อมูล',
+      viewModalBtn: 'เปิดดูผลตรวจล่าสุด',
+      closeModalBtn: 'ปิดหน้าต่าง',
+      recheckBtn: 'ตรวจซ้ำ',
+      copySummaryBtn: 'คัดลอกสรุปผล',
+      copiedSummary: 'คัดลอกสรุปผลแล้ว!',
+      modalTitle: 'ผลการตรวจสอบโควตา API Key ส่วนบุคคล',
+      modalSubtitle: 'รายงานสถานะความพร้อมและงบประมาณสะสมสำหรับคีย์ของคุณโดยเฉพาะ',
       curlTab: 'วิธีรัน cURL เองผ่าน Terminal (สำหรับนักพัฒนา)',
       curlDesc: 'หากไม่ต้องการวาง Key บนเบราว์เซอร์ คุณสามารถคัดลอกคำสั่ง cURL ไปรันบน Terminal ของเครื่องตัวเองเพื่อดู Response Headers ได้โดยตรง:',
       curlCopied: 'คัดลอกคำสั่ง cURL แล้ว!',
@@ -452,9 +476,9 @@ export const translations: Record<Language, Translations> = {
       statusValid: 'ใช้งานได้ปกติ (HTTP 200)',
       statusInvalid: 'Key ไม่ถูกต้องหรือหมดอายุ (HTTP 401)',
       statusThrottled: 'ติดขีดจำกัดชั่วคราว (HTTP 429)',
-      concurrencyLabel: 'คำขอพร้อมกัน (Concurrency)',
-      tpmLabel: 'โควตา Token (TPM)',
-      budgetLabel: 'วงเงินสะสมต่อเดือน (Key Budget)',
+      concurrencyLabel: 'คำขอพร้อมกันของคุณ (Concurrency)',
+      tpmLabel: 'โควตา Token ของคุณ (TPM)',
+      budgetLabel: 'วงเงินสะสมคีย์ของคุณ (Key Budget)',
       latencyLabel: 'เวลาตอบสนอง (Latency)',
       checkedAtLabel: 'ตรวจสอบเมื่อ',
       slotsFree: 'ว่าง {free} จาก {max} ช่อง ({pct}% คงเหลือ)',
@@ -728,15 +752,18 @@ export const translations: Record<Language, Translations> = {
       viewFaqBtn: 'Understand Limits & Fixes (FAQ) ↓',
     },
     usageLimits: {
-      title: 'Usage Quotas & Rate Limits',
-      subtitle: 'Real-time telemetry tracking per-key tier caps and quota headroom from gateway response headers',
+      title: 'System Usage Quotas & Rate Limits',
+      subtitle: 'Real-time telemetry tracking standard per-key tier caps from the status monitor\'s testing key',
+      systemBadge: 'Status Monitor Baseline (System Test Key)',
+      systemNotice: 'Telemetry displayed here represents standard tier caps and the automated status monitor\'s accumulated usage (not your personal account). To inspect your own key, use the Personal Quota Checker above.',
+      jumpToPersonalChecker: 'Jump to Personal Quota Checker ↑',
       allNormal: 'All Quotas Normal — No throttling active',
       throttledNotice: 'Rate Limiting Active (HTTP 429) — Gateway is temporarily throttling requests',
-      concurrencyTitle: 'Parallel Requests (Concurrency)',
+      concurrencyTitle: 'Parallel Requests (Concurrency - Test Probe)',
       concurrencyDesc: 'Real-time in-flight slots (frees up the moment each inference finishes)',
-      tokensTitle: 'Tokens Per Minute (TPM)',
+      tokensTitle: 'Tokens Per Minute (TPM - Test Probe)',
       tokensDesc: 'Token volume ceiling per 1-minute window (resets rolling every 60 seconds)',
-      budgetTitle: 'Monitor Key Budget',
+      budgetTitle: 'Monitor Probe Budget',
       budgetDesc: 'Accumulated monthly spend of the monitor testing key ($50/month allocation)',
       remaining: 'Remaining',
       used: 'Used',
@@ -758,7 +785,9 @@ export const translations: Record<Language, Translations> = {
     },
     userQuotaChecker: {
       title: 'Personal API Key Quota Checker',
-      subtitle: 'Enter your 9ARM Gateway API Key to check your real-time concurrency slots, TPM token quota headroom, and remaining budget.',
+      subtitle: 'Enter your 9ARM Gateway API Key to check your personal concurrency slots, TPM token quota, and remaining budget (100% isolated from the monitor).',
+      personalBadge: 'Your Personal API Key Quota',
+      personalNotice: 'This tool computes and displays results exclusively for YOUR personal API key, completely isolated from the system monitor probes above.',
       securityBadge: '100% Zero-Knowledge',
       securityDisclaimer: 'Completely Private: Your API Key is never stored in any database or disk. It is dispatched via encrypted HTTPS purely to query response headers from gateway.9arm.co and immediately discarded from memory.',
       inputLabel: '9ARM Gateway API Key',
@@ -766,6 +795,13 @@ export const translations: Record<Language, Translations> = {
       checkBtn: 'Check Quota',
       checkingBtn: 'Checking...',
       clearBtn: 'Clear Data',
+      viewModalBtn: 'View Latest Report',
+      closeModalBtn: 'Close',
+      recheckBtn: 'Re-check',
+      copySummaryBtn: 'Copy Summary',
+      copiedSummary: 'Summary copied!',
+      modalTitle: 'Personal API Key Quota Report',
+      modalSubtitle: 'Real-time telemetry and budget report for your individual API key',
       curlTab: 'Run via Terminal cURL (For Developers)',
       curlDesc: 'If you prefer not to paste your key into a web interface, copy and run this standard cURL command in your local terminal to inspect headers directly:',
       curlCopied: 'cURL command copied!',
@@ -774,9 +810,9 @@ export const translations: Record<Language, Translations> = {
       statusValid: 'Authorized & Healthy (HTTP 200)',
       statusInvalid: 'Invalid or Expired Key (HTTP 401)',
       statusThrottled: 'Rate Limited (HTTP 429)',
-      concurrencyLabel: 'Parallel Requests (Concurrency)',
-      tpmLabel: 'Tokens Per Minute (TPM)',
-      budgetLabel: 'Monthly Key Budget',
+      concurrencyLabel: 'Your Parallel Requests (Concurrency)',
+      tpmLabel: 'Your Token Quota (TPM)',
+      budgetLabel: 'Your Monthly Key Budget',
       latencyLabel: 'Response Latency',
       checkedAtLabel: 'Checked At',
       slotsFree: '{free} of {max} slots free ({pct}% remaining)',

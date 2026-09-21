@@ -106,6 +106,8 @@ function App() {
 
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     const path = window.location.pathname;
+    const hash = window.location.hash;
+    if (path === '/limits' || hash === '#personal-quota-checker' || hash === '#tab-limits' || hash === '#faq-limits') return 'limits';
     if (path === '/uptime') return 'uptime';
     if (path === '/incidents') return 'incidents';
     if (path === '/admin') return 'admin';
@@ -160,23 +162,46 @@ function App() {
   // Sync tab to URL
   useEffect(() => {
     let path = '/';
-    if (activeTab === 'uptime') path = '/uptime';
+    if (activeTab === 'limits') path = '/limits';
+    else if (activeTab === 'uptime') path = '/uptime';
     else if (activeTab === 'incidents') path = '/incidents';
     else if (activeTab === 'admin') path = '/admin';
     if (window.location.pathname !== path) window.history.pushState(null, '', path);
   }, [activeTab]);
 
-  // Browser back/forward
+  // Browser back/forward and hash navigation
   useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname;
-      if (path === '/uptime') setActiveTab('uptime');
+      const hash = window.location.hash;
+      if (path === '/limits' || hash === '#personal-quota-checker' || hash === '#tab-limits' || hash === '#faq-limits') {
+        setActiveTab('limits');
+      } else if (path === '/uptime') setActiveTab('uptime');
       else if (path === '/incidents') setActiveTab('incidents');
       else if (path === '/admin') setActiveTab('admin');
       else setActiveTab('components');
     };
+
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash === '#personal-quota-checker' || hash === '#tab-limits' || hash === '#faq-limits') {
+        setActiveTab('limits');
+        setTimeout(() => {
+          if (hash === '#personal-quota-checker') {
+            document.getElementById('personal-quota-checker')?.scrollIntoView({ behavior: 'smooth' });
+          } else if (hash === '#faq-limits') {
+            document.getElementById('faq-limits')?.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 120);
+      }
+    };
+
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handleHashChange);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('hashchange', handleHashChange);
+    };
   }, []);
 
   const fetchUptimeData = async (isSilentRefresh = false) => {
