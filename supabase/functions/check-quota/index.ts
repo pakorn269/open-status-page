@@ -1,12 +1,61 @@
 // Supabase Edge Function: check-quota
 // Stateless, zero-knowledge passthrough to query LiteLLM rate limit headers from gateway.9arm.co
 // NEVER saves the user's API key to database, disk, or persistent logs.
+// Protected by In-Memory IP Rate Limiting (10 requests/minute per client IP).
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-user-api-key',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
+
+interface RateLimitRecord {
+  count: number;
+  resetTime: number; // Unix epoch in ms
+}
+
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 60 seconds
+const MAX_REQUESTS_PER_WINDOW = 10; // Max 10 requests per minute per IP
+const ipRateLimits = new Map<string, RateLimitRecord>();
+
+function getClientIp(req: Request): string {
+  return (
+    req.headers.get('cf-connecting-ip') ||
+    req.headers.get('x-real-ip') ||
+    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+    '127.0.0.1'
+  );
+}
+
+function checkRateLimit(ip: string): { allowed: boolean; retryAfterSeconds?: number } {
+  const now = Date.now();
+  const record = ipRateLimits.get(ip);
+
+  // Periodically clean up expired entries if map grows
+  if (ipRateLimits.size > 500) {
+    for (const [key, val] of ipRateLimits.entries()) {
+      if (now > val.resetTime) {
+        ipRateLimits.delete(key);
+      }
+    }
+  }
+
+  if (!record || now > record.resetTime) {
+    ipRateLimits.set(ip, {
+      count: 1,
+      resetTime: now + RATE_LIMIT_WINDOW_MS,
+    });
+    return { allowed: true };
+  }
+
+  if (record.count >= MAX_REQUESTS_PER_WINDOW) {
+    const retryAfterSeconds = Math.max(1, Math.ceil((record.resetTime - now) / 1000));
+    return { allowed: false, retryAfterSeconds };
+  }
+
+  record.count += 1;
+  return { allowed: true };
+}
 
 Deno.serve(async (req) => {
   // 1. Handle CORS Preflight
@@ -19,6 +68,31 @@ Deno.serve(async (req) => {
       status: 405,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+  }
+
+  // 2. IP-based Rate Limiting (Prevent abuse, DoS, and Brute-force)
+  const clientIp = getClientIp(req);
+  const rateLimitStatus = checkRateLimit(clientIp);
+
+  if (!rateLimitStatus.allowed) {
+    const retryAfter = rateLimitStatus.retryAfterSeconds ?? 60;
+    return new Response(
+      JSON.stringify({
+        valid: false,
+        statusCode: 429,
+        isRateLimited: true,
+        error: `Rate limit exceeded: Too many checks from your IP (max 10/minute). Please retry in ${retryAfter}s.`,
+        retryAfter,
+      }),
+      {
+        status: 429,
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json',
+          'Retry-After': String(retryAfter),
+        },
+      }
+    );
   }
 
   try {
@@ -46,7 +120,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Query gateway.9arm.co /v1/models with the user's key
+    // 3. Query gateway.9arm.co /v1/models with the user's key
     const startTime = Date.now();
     const gatewayRes = await fetch('https://gateway.9arm.co/v1/models', {
       method: 'GET',
@@ -57,7 +131,7 @@ Deno.serve(async (req) => {
     });
     const latencyMs = Date.now() - startTime;
 
-    // 3. Extract telemetry headers
+    // 4. Extract telemetry headers
     const maxParallel = Number(gatewayRes.headers.get('x-ratelimit-api_key-limit-max_parallel_requests')) || 3;
     const remainingParallelHeader = gatewayRes.headers.get('x-ratelimit-api_key-remaining-max_parallel_requests');
     const remainingParallel = remainingParallelHeader !== null ? Number(remainingParallelHeader) : maxParallel;
@@ -75,7 +149,7 @@ Deno.serve(async (req) => {
     const budgetRemaining = Math.max(0, keyMaxBudget - keySpend);
     const budgetPctRemaining = Math.max(0, Math.min(100, Math.round((budgetRemaining / keyMaxBudget) * 100)));
 
-    // 4. Return sanitized telemetry payload (API key is never logged or saved)
+    // 5. Return sanitized telemetry payload (API key is never logged or saved)
     if (gatewayRes.status === 200) {
       return new Response(
         JSON.stringify({

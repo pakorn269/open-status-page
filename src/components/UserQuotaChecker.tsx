@@ -34,6 +34,7 @@ interface QuotaResult {
   keySpend?: number;
   budgetRemaining?: number;
   budgetPctRemaining?: number;
+  retryAfter?: number;
   checkedAt: string;
 }
 
@@ -46,6 +47,14 @@ export const UserQuotaChecker: React.FC = () => {
   const [result, setResult] = useState<QuotaResult | null>(null);
   const [copiedCurl, setCopiedCurl] = useState(false);
   const [showCurlHelper, setShowCurlHelper] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  // Cooldown countdown timer
+  React.useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown(c => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ssqvojmcrubohsudmrta.supabase.co';
 
@@ -59,6 +68,7 @@ export const UserQuotaChecker: React.FC = () => {
 
     setLoading(true);
     setError(null);
+    setCooldown(3); // 3-second anti-spam cooldown
 
     try {
       const endpoint = `${supabaseUrl}/functions/v1/check-quota`;
@@ -72,6 +82,13 @@ export const UserQuotaChecker: React.FC = () => {
       });
 
       const data: QuotaResult = await res.json();
+
+      if (res.status === 429 || data.statusCode === 429) {
+        if (data.retryAfter) setCooldown(data.retryAfter);
+        setError(data.error || t('userQuotaChecker.rateLimitWarning'));
+        setResult(null);
+        return;
+      }
 
       if (!res.ok && !data.statusCode) {
         throw new Error(data.error || `HTTP error ${res.status}`);
@@ -212,13 +229,18 @@ export const UserQuotaChecker: React.FC = () => {
         <div className="flex items-center gap-2.5 flex-wrap">
           <button
             type="submit"
-            disabled={loading || !apiKey.trim()}
+            disabled={loading || !apiKey.trim() || cooldown > 0}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-semibold shadow-xs transition-colors cursor-pointer"
           >
             {loading ? (
               <>
                 <Loader2 size={15} className="animate-spin" />
                 <span>{t('userQuotaChecker.checkingBtn')}</span>
+              </>
+            ) : cooldown > 0 ? (
+              <>
+                <Clock size={15} className="animate-pulse" />
+                <span>{t('userQuotaChecker.cooldownBtn', { seconds: cooldown })}</span>
               </>
             ) : (
               <>

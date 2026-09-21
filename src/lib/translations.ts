@@ -138,6 +138,8 @@ export interface Translations {
     budgetRemaining: string;
     emptyInputAlert: string;
     errorPrefix: string;
+    cooldownBtn: string;
+    rateLimitWarning: string;
   };
   faq: {
     title: string;
@@ -460,6 +462,8 @@ export const translations: Record<Language, Translations> = {
       budgetRemaining: 'เหลือ ${remaining} จาก ${max} ({pct}% คงเหลือ)',
       emptyInputAlert: 'กรุณากรอก API Key ก่อนกดตรวจสอบ',
       errorPrefix: 'เกิดข้อผิดพลาด:',
+      cooldownBtn: 'รออีก {seconds} วินาที',
+      rateLimitWarning: 'คุณตรวจสอบถี่เกินไป (สูงสุด 10 ครั้ง/นาที) เพื่อความปลอดภัยของระบบ กรุณารอสักครู่แล้วลองใหม่',
     },
     faq: {
       title: 'คำถามที่พบบ่อยเกี่ยวกับโควตา & Rate Limit (FAQ)',
@@ -780,6 +784,8 @@ export const translations: Record<Language, Translations> = {
       budgetRemaining: '${remaining} of ${max} remaining ({pct}% remaining)',
       emptyInputAlert: 'Please enter an API Key before checking',
       errorPrefix: 'Error:',
+      cooldownBtn: 'Wait {seconds}s',
+      rateLimitWarning: 'Rate limit reached: Maximum 10 checks per minute per IP. Please wait before retrying.',
     },
     faq: {
       title: 'Frequently Asked Questions (FAQ)',
