@@ -12,6 +12,7 @@ import {
 import { useTranslation } from '../lib/i18n';
 import type { ServiceComponent } from './ComponentList';
 import type { PingLog } from './ResponseTimeChart';
+import { UserQuotaChecker } from './UserQuotaChecker';
 import { FaqSection } from './FaqSection';
 import dayjs from 'dayjs';
 
@@ -289,6 +290,9 @@ export const UsageLimitsTab: React.FC<UsageLimitsTabProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Personal User API Key Quota Checker */}
+      <UserQuotaChecker />
 
       {/* Per-Model Quota Breakdown */}
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 shadow-xs">

@@ -110,6 +110,35 @@ export interface Translations {
     devTipsDesc: string;
     quickSwitchFaq: string;
   };
+  userQuotaChecker: {
+    title: string;
+    subtitle: string;
+    securityBadge: string;
+    securityDisclaimer: string;
+    inputLabel: string;
+    inputPlaceholder: string;
+    checkBtn: string;
+    checkingBtn: string;
+    clearBtn: string;
+    curlTab: string;
+    curlDesc: string;
+    curlCopied: string;
+    copyCurlBtn: string;
+    resultTitle: string;
+    statusValid: string;
+    statusInvalid: string;
+    statusThrottled: string;
+    concurrencyLabel: string;
+    tpmLabel: string;
+    budgetLabel: string;
+    latencyLabel: string;
+    checkedAtLabel: string;
+    slotsFree: string;
+    tokenRemaining: string;
+    budgetRemaining: string;
+    emptyInputAlert: string;
+    errorPrefix: string;
+  };
   faq: {
     title: string;
     subtitle: string;
@@ -403,6 +432,35 @@ export const translations: Record<Language, Translations> = {
       devTipsDesc: 'การส่งคำขอแบบมี Semaphore หรือ Concurrency Pool ขนาดไม่เกิน 3 คำขอ พร้อมการทำ Exponential Backoff (รอ 2-5 วินาทีเมื่อพบ 429) จะช่วยให้แอปพลิเคชันทำงานได้ราบรื่นที่สุด',
       quickSwitchFaq: 'อ่านคำถามที่พบบ่อย (FAQ) ด้านล่าง ↓',
     },
+    userQuotaChecker: {
+      title: 'ตรวจสอบโควตา API Key ของคุณ (Personal Quota Checker)',
+      subtitle: 'ใส่ API Key ของคุณเพื่อตรวจสอบสถานะ Concurrency, โควตา Tokens (TPM) และวงเงินคงเหลือส่วนบุคคลแบบเรียลไทม์',
+      securityBadge: 'Zero-Knowledge 100%',
+      securityDisclaimer: 'ปลอดภัยสูงสุด: ระบบไม่บันทึก API Key ของคุณลงฐานข้อมูลหรือ Disk ใดๆ ทั้งสิ้น คำขอจะถูกส่งผ่าน HTTPS ตรงไปยังเกตเวย์เพื่ออ่านเฉพาะตัวเลขโควตาจาก Response Headers เท่านั้น และถูกทำลายจากหน่วยความจำทันที',
+      inputLabel: '9ARM Gateway API Key',
+      inputPlaceholder: 'วาง API Key ของคุณที่นี่ (เช่น sk-...)',
+      checkBtn: 'ตรวจสอบโควตา',
+      checkingBtn: 'กำลังตรวจสอบ...',
+      clearBtn: 'ล้างข้อมูล',
+      curlTab: 'วิธีรัน cURL เองผ่าน Terminal (สำหรับนักพัฒนา)',
+      curlDesc: 'หากไม่ต้องการวาง Key บนเบราว์เซอร์ คุณสามารถคัดลอกคำสั่ง cURL ไปรันบน Terminal ของเครื่องตัวเองเพื่อดู Response Headers ได้โดยตรง:',
+      curlCopied: 'คัดลอกคำสั่ง cURL แล้ว!',
+      copyCurlBtn: 'คัดลอกคำสั่ง cURL',
+      resultTitle: 'ผลการตรวจสอบโควตาสำหรับ Key ของคุณ',
+      statusValid: 'ใช้งานได้ปกติ (HTTP 200)',
+      statusInvalid: 'Key ไม่ถูกต้องหรือหมดอายุ (HTTP 401)',
+      statusThrottled: 'ติดขีดจำกัดชั่วคราว (HTTP 429)',
+      concurrencyLabel: 'คำขอพร้อมกัน (Concurrency)',
+      tpmLabel: 'โควตา Token (TPM)',
+      budgetLabel: 'วงเงินสะสมต่อเดือน (Key Budget)',
+      latencyLabel: 'เวลาตอบสนอง (Latency)',
+      checkedAtLabel: 'ตรวจสอบเมื่อ',
+      slotsFree: 'ว่าง {free} จาก {max} ช่อง ({pct}% คงเหลือ)',
+      tokenRemaining: 'เหลือ {tokens} จาก {limit} TPM ({pct}% คงเหลือ)',
+      budgetRemaining: 'เหลือ ${remaining} จาก ${max} ({pct}% คงเหลือ)',
+      emptyInputAlert: 'กรุณากรอก API Key ก่อนกดตรวจสอบ',
+      errorPrefix: 'เกิดข้อผิดพลาด:',
+    },
     faq: {
       title: 'คำถามที่พบบ่อยเกี่ยวกับโควตา & Rate Limit (FAQ)',
       subtitle: 'รวมคำตอบข้อสงสัยสำหรับสมาชิกชุมชน 9ARM AI PASSPORT และผู้ใช้งานเกตเวย์',
@@ -693,6 +751,35 @@ export const translations: Record<Language, Translations> = {
       devTipsTitle: 'Developer Guidelines to Avoid HTTP 429',
       devTipsDesc: 'Use an in-process semaphore or concurrency pool capped at <= 3 parallel requests with exponential backoff (retry after 2–5s) for optimal throughput.',
       quickSwitchFaq: 'Jump to FAQ & Q&A below ↓',
+    },
+    userQuotaChecker: {
+      title: 'Personal API Key Quota Checker',
+      subtitle: 'Enter your 9ARM Gateway API Key to check your real-time concurrency slots, TPM token quota headroom, and remaining budget.',
+      securityBadge: '100% Zero-Knowledge',
+      securityDisclaimer: 'Completely Private: Your API Key is never stored in any database or disk. It is dispatched via encrypted HTTPS purely to query response headers from gateway.9arm.co and immediately discarded from memory.',
+      inputLabel: '9ARM Gateway API Key',
+      inputPlaceholder: 'Paste your API Key here (e.g. sk-...)',
+      checkBtn: 'Check Quota',
+      checkingBtn: 'Checking...',
+      clearBtn: 'Clear Data',
+      curlTab: 'Run via Terminal cURL (For Developers)',
+      curlDesc: 'If you prefer not to paste your key into a web interface, copy and run this standard cURL command in your local terminal to inspect headers directly:',
+      curlCopied: 'cURL command copied!',
+      copyCurlBtn: 'Copy cURL Command',
+      resultTitle: 'Quota Telemetry for Your Key',
+      statusValid: 'Authorized & Healthy (HTTP 200)',
+      statusInvalid: 'Invalid or Expired Key (HTTP 401)',
+      statusThrottled: 'Rate Limited (HTTP 429)',
+      concurrencyLabel: 'Parallel Requests (Concurrency)',
+      tpmLabel: 'Tokens Per Minute (TPM)',
+      budgetLabel: 'Monthly Key Budget',
+      latencyLabel: 'Response Latency',
+      checkedAtLabel: 'Checked At',
+      slotsFree: '{free} of {max} slots free ({pct}% remaining)',
+      tokenRemaining: '{tokens} of {limit} TPM remaining ({pct}% remaining)',
+      budgetRemaining: '${remaining} of ${max} remaining ({pct}% remaining)',
+      emptyInputAlert: 'Please enter an API Key before checking',
+      errorPrefix: 'Error:',
     },
     faq: {
       title: 'Frequently Asked Questions (FAQ)',

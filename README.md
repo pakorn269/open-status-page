@@ -49,6 +49,7 @@ An open-source, community-run status monitor for **[gateway.9arm.co](https://gat
   - 🕒 **24-Hour 429 Incident Log**: Audits and displays rate-limiting occurrences over the past 24 hours.
   - 💡 **Developer Best Practices**: Recommendations on semaphore pooling (<= 3 requests) and exponential backoff retry strategies.
   - ❓ **Bilingual Community FAQ**: Interactive accordion resolving community questions on HTTP 429 error resolution, quota reset cycles, and data transparency.
+- **Personal API Key Quota Checker (100% Zero-Knowledge)** — allows community developers to inspect their own API Key quotas (concurrency, TPM, and budget headroom) in real-time without storing keys. The key is never logged or saved to any database, transmitted over HTTPS through a stateless in-memory Edge Function, and includes a built-in Terminal cURL generator for local testing.
 - **HTTP 429 Rate-Limit Classification & Alerts** — distinguishes rate limiting (429) from hard server failures (5xx); displays an amber glowing alert banner on the status page and dispatches dedicated Thai Telegram notifications
 - **URL-synced tabs** — `/`, `/incidents`, `/uptime`, `/admin` with browser back/forward support and alert notification pulse badges
 - **Auto-refresh** — polls for new data silently every 60 seconds
@@ -209,6 +210,7 @@ open-status-page/
 │   │   ├── RateLimitNoticeBanner.tsx # Amber alert banner for active HTTP 429 rate limiting
 │   │   ├── ComponentList.tsx        # Multi-service list + 288-check grid & click-to-copy
 │   │   ├── UsageLimitsTab.tsx       # Usage limits dashboard, gauges (% remaining), per-model breakdown, & 429 logs
+│   │   ├── UserQuotaChecker.tsx     # Zero-Knowledge personal API Key quota tester with cURL snippet helper
 │   │   ├── FaqSection.tsx           # Bilingual community FAQ accordion for rate limits & quotas
 │   │   ├── ResponseTimeChart.tsx    # Multi-color 24h latency chart with endpoint filter tabs
 │   │   ├── UptimeGrid.tsx           # 90-day calendar uptime grid with service selector
@@ -227,9 +229,11 @@ open-status-page/
 │   └── main.tsx
 ├── supabase/
 │   ├── functions/
-│   │   └── health-check/
-│   │       ├── index.ts             # Parallel multi-endpoint check, 429 detection & Telegram broadcast logic
-│   │       └── deno.json            # Deno compiler config for IDE support
+│   │   ├── health-check/
+│   │   │   ├── index.ts             # Parallel multi-endpoint check, 429 detection & Telegram broadcast logic
+│   │   │   └── deno.json            # Deno compiler config for IDE support
+│   │   └── check-quota/
+│   │       └── index.ts             # Stateless, zero-knowledge personal API key quota inspector
 │   ├── setup.sql                    # incidents table + cron schedule
 │   ├── setup_api_logs.sql           # api_status_logs table + 90-day uptime RPC
 │   ├── upgrade_uptime_rpc.sql       # Per-endpoint weighted 90-day uptime RPC
