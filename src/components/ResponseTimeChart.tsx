@@ -9,6 +9,14 @@ export interface PingLog {
   status_code: number;
   is_operational: boolean;
   endpoint?: string;
+  remaining_tokens?: number | null;
+  token_limit?: number | null;
+  max_parallel_requests?: number | null;
+  remaining_parallel_requests?: number | null;
+  key_spend?: number | null;
+  key_max_budget?: number | null;
+  error_type?: string | null;
+  error_message?: string | null;
 }
 
 export type ChartTimeRange = '1h' | '6h' | '24h' | '7d';

@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Header } from './components/Header';
 import { StatusBanner } from './components/StatusBanner';
+import { RateLimitNoticeBanner } from './components/RateLimitNoticeBanner';
 import { Announcements } from './components/Announcements';
 import { UptimeGrid } from './components/UptimeGrid';
 import { IncidentHistory } from './components/IncidentHistory';
 import { ComponentList } from './components/ComponentList';
 import { PastIncidents } from './components/PastIncidents';
+import { FaqSection } from './components/FaqSection';
+import { UsageLimitsTab } from './components/UsageLimitsTab';
 import { AdminPanel } from './components/AdminPanel';
 import { Footer } from './components/Footer';
 import { ResponseTimeChart, type PingLog } from './components/ResponseTimeChart';
@@ -16,7 +19,7 @@ import { supabase } from './lib/supabase';
 import { useTranslation } from './lib/i18n';
 import dayjs from 'dayjs';
 
-type TabType = 'components' | 'incidents' | 'uptime' | 'admin';
+type TabType = 'components' | 'limits' | 'incidents' | 'uptime' | 'admin';
 
 interface AppState {
   overallStatus: 'operational' | 'degraded' | 'outage';
@@ -262,11 +265,23 @@ function App() {
         : 100;
 
       // 3. Scalable Latency Logs (Ordered descending to always include present-time logs, up to 3000 rows)
-      const { data: latencyRows } = await supabase
+      let latencyRows: any[] | null = null;
+      const fullLatencyQuery = await supabase
         .from('api_status_logs')
-        .select('created_at, response_time_ms, status_code, is_operational, endpoint')
+        .select('created_at, response_time_ms, status_code, is_operational, endpoint, remaining_tokens, token_limit, max_parallel_requests, remaining_parallel_requests, key_spend, key_max_budget')
         .order('created_at', { ascending: false })
         .limit(3000);
+
+      if (!fullLatencyQuery.error && fullLatencyQuery.data) {
+        latencyRows = fullLatencyQuery.data;
+      } else {
+        const baseLatencyQuery = await supabase
+          .from('api_status_logs')
+          .select('created_at, response_time_ms, status_code, is_operational, endpoint')
+          .order('created_at', { ascending: false })
+          .limit(3000);
+        latencyRows = baseLatencyQuery.data;
+      }
 
       // Normalize legacy Qwen endpoint name to FP8 so historical latency graphs remain connected
       const latencyLogs: PingLog[] = latencyRows
@@ -291,7 +306,9 @@ function App() {
         const latencyThresholdMs = isModel ? 3500 : 1500;
 
         if (latestLog) {
-          if (!latestLog.is_operational || latestLog.status_code >= 500) {
+          if (latestLog.status_code === 429) {
+            compStatus = 'rate_limited';
+          } else if (!latestLog.is_operational || latestLog.status_code >= 500) {
             compStatus = 'major_outage';
           } else if (latestLog.response_time_ms > latencyThresholdMs || (latestLog.status_code >= 400 && latestLog.status_code !== 401)) {
             compStatus = 'degraded';
@@ -312,13 +329,20 @@ function App() {
           uptimeDays: compUptimeDays,
           uptimePercentage: comp90dUptime,
           responseTimeMs: compResponseTime,
+          remainingTokens: latestLog?.remaining_tokens ?? null,
+          tokenLimit: latestLog?.token_limit ?? null,
+          maxParallelRequests: latestLog?.max_parallel_requests ?? null,
+          remainingParallelRequests: latestLog?.remaining_parallel_requests ?? null,
+          keySpend: latestLog?.key_spend != null ? Number(latestLog.key_spend) : null,
+          keyMaxBudget: latestLog?.key_max_budget != null ? Number(latestLog.key_max_budget) : null,
+          statusCode: latestLog?.status_code,
         };
       });
 
       // Compute overall system status across all components
       let overallStatus: AppState['overallStatus'] = 'operational';
       const hasOutage = componentsData.some(c => c.status === 'major_outage' || c.status === 'partial_outage');
-      const hasDegraded = componentsData.some(c => c.status === 'degraded');
+      const hasDegraded = componentsData.some(c => c.status === 'degraded' || c.status === 'rate_limited');
       const allDown = componentsData.every(c => c.status === 'major_outage');
 
       if (allDown) {
@@ -391,8 +415,16 @@ function App() {
 
   const { t } = useTranslation();
 
-  const tabs: { key: TabType; label: string; badge?: number }[] = [
+  const rateLimitedCount = state.componentsData.filter(c => c.status === 'rate_limited').length;
+
+  const tabs: { key: TabType; label: string; badge?: number; badgeColor?: string }[] = [
     { key: 'components', label: t('tabs.currentStatus') },
+    { 
+      key: 'limits', 
+      label: t('tabs.limits'), 
+      badge: rateLimitedCount > 0 ? rateLimitedCount : undefined,
+      badgeColor: 'bg-amber-500 animate-pulse'
+    },
     { key: 'incidents', label: t('tabs.incidents'), badge: state.incidentCount24h > 0 ? state.incidentCount24h : undefined },
     { key: 'uptime', label: t('tabs.uptime') },
     ...(activeTab === 'admin' ? [{ key: 'admin' as TabType, label: t('tabs.admin') }] : []),
@@ -421,7 +453,7 @@ function App() {
             >
               <span>{tab.label}</span>
               {tab.badge !== undefined && (
-                <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[10px] font-bold rounded-full leading-none">
+                <span className={`px-1.5 py-0.5 text-white text-[10px] font-bold rounded-full leading-none ${tab.badgeColor || 'bg-amber-500'}`}>
                   {tab.badge}
                 </span>
               )}
@@ -450,6 +482,10 @@ function App() {
                   responseTimeMs={state.responseTimeMs}
                   incidentCount24h={state.incidentCount24h}
                 />
+                <RateLimitNoticeBanner
+                  rateLimitedComponents={state.componentsData.filter(c => c.status === 'rate_limited')}
+                  onNavigateToLimitsTab={() => setActiveTab('limits')}
+                />
                 <Announcements />
                 <ComponentList
                   components={state.componentsData}
@@ -464,7 +500,16 @@ function App() {
                   months={state.incidentData}
                   incidentCount24h={state.incidentCount24h}
                 />
+                <FaqSection />
               </>
+            )}
+
+            {activeTab === 'limits' && (
+              <UsageLimitsTab
+                components={state.componentsData}
+                recentLogs={state.latencyLogs}
+                lastRefreshed={state.lastRefreshed}
+              />
             )}
 
             {activeTab === 'incidents' && (

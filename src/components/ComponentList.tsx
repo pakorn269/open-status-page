@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Check, Minus, AlertTriangle, X, Wrench, Clock, Calendar, CheckCheck } from 'lucide-react';
+import { Check, Minus, AlertTriangle, X, Wrench, Clock, Calendar, CheckCheck, Users, Gauge, CreditCard, Zap } from 'lucide-react';
 import dayjs from 'dayjs';
 import type { UptimeDay } from './UptimeGrid';
 import type { PingLog } from './ResponseTimeChart';
@@ -8,10 +8,17 @@ import { useTranslation } from '../lib/i18n';
 export interface ServiceComponent {
   id: string;
   name: string;
-  status: 'operational' | 'degraded' | 'partial_outage' | 'major_outage' | 'maintenance';
+  status: 'operational' | 'degraded' | 'partial_outage' | 'major_outage' | 'maintenance' | 'rate_limited';
   uptimeDays: UptimeDay[];
   uptimePercentage: number;
   responseTimeMs?: number;
+  remainingTokens?: number | null;
+  tokenLimit?: number | null;
+  maxParallelRequests?: number | null;
+  remainingParallelRequests?: number | null;
+  keySpend?: number | null;
+  keyMaxBudget?: number | null;
+  statusCode?: number;
 }
 
 interface ComponentListProps {
@@ -22,10 +29,15 @@ interface ComponentListProps {
 interface CheckEntry {
   date: string;
   endDate: string;
-  status: 'operational' | 'degraded' | 'outage' | 'no-data';
+  status: 'operational' | 'degraded' | 'outage' | 'no-data' | 'rate_limited';
   responseTimeMs?: number;
   statusCode?: number;
   checkCount: number;
+  remainingTokens?: number | null;
+  tokenLimit?: number | null;
+  maxParallelRequests?: number | null;
+  keySpend?: number | null;
+  keyMaxBudget?: number | null;
 }
 
 export const ComponentList: React.FC<ComponentListProps> = ({ components, recentLogs = [] }) => {
@@ -56,6 +68,11 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
       ...('responseTimeMs' in entry && entry.responseTimeMs !== undefined ? { response_time_ms: entry.responseTimeMs } : {}),
       ...('statusCode' in entry && entry.statusCode !== undefined ? { status_code: entry.statusCode } : {}),
       ...('checkCount' in entry && entry.checkCount !== undefined ? { checks_in_interval: entry.checkCount } : {}),
+      ...('remainingTokens' in entry && entry.remainingTokens !== undefined && entry.remainingTokens !== null ? { remaining_tokens: entry.remainingTokens } : {}),
+      ...('tokenLimit' in entry && entry.tokenLimit !== undefined && entry.tokenLimit !== null ? { token_limit: entry.tokenLimit } : {}),
+      ...('maxParallelRequests' in entry && entry.maxParallelRequests !== undefined && entry.maxParallelRequests !== null ? { max_parallel_requests: entry.maxParallelRequests } : {}),
+      ...('keySpend' in entry && entry.keySpend !== undefined && entry.keySpend !== null ? { key_spend: entry.keySpend } : {}),
+      ...('keyMaxBudget' in entry && entry.keyMaxBudget !== undefined && entry.keyMaxBudget !== null ? { key_max_budget: entry.keyMaxBudget } : {}),
     };
 
     const textToCopy = JSON.stringify(payload, null, 2);
@@ -65,14 +82,15 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
     }
   };
 
-  const getStatusColor = (status: 'operational' | 'degraded' | 'outage' | 'maintenance' | 'no-data') => {
+  const getStatusColor = (status: 'operational' | 'degraded' | 'outage' | 'maintenance' | 'no-data' | 'rate_limited') => {
     switch (status) {
-      case 'operational': return '#22c55e'; // Vibrant Emerald/Green
-      case 'degraded':    return '#eab308'; // Amber/Yellow
-      case 'outage':      return '#ef4444'; // Red
-      case 'maintenance': return '#3b82f6'; // Blue
-      case 'no-data':     return '#d1d5db'; // Light gray
-      default:            return '#d1d5db';
+      case 'operational':  return '#22c55e'; // Vibrant Emerald/Green
+      case 'degraded':     return '#eab308'; // Amber/Yellow
+      case 'rate_limited': return '#f59e0b'; // Amber 500
+      case 'outage':       return '#ef4444'; // Red
+      case 'maintenance':  return '#3b82f6'; // Blue
+      case 'no-data':      return '#d1d5db'; // Light gray
+      default:             return '#d1d5db';
     }
   };
 
@@ -80,6 +98,7 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
     switch (status) {
       case 'operational':    return t('componentList.operational');
       case 'degraded':       return t('componentList.degraded');
+      case 'rate_limited':   return t('componentList.rateLimited');
       case 'partial_outage': return t('componentList.partialOutage');
       case 'major_outage':   return t('componentList.majorOutage');
       case 'maintenance':    return t('componentList.maintenance');
@@ -90,6 +109,7 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
     switch (status) {
       case 'operational':    return 'text-[#16a34a] dark:text-[#22c55e]';
       case 'degraded':       return 'text-[#ca8a04] dark:text-[#eab308]';
+      case 'rate_limited':   return 'text-[#d97706] dark:text-[#f59e0b]';
       case 'partial_outage': return 'text-[#ea580c] dark:text-[#f97316]';
       case 'major_outage':   return 'text-[#dc2626] dark:text-[#ef4444]';
       case 'maintenance':    return 'text-[#2563eb] dark:text-[#3b82f6]';
@@ -101,6 +121,7 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
     switch (status) {
       case 'operational':    return <Check className={className} />;
       case 'degraded':       return <Minus className={className} />;
+      case 'rate_limited':   return <AlertTriangle className={className} />;
       case 'partial_outage': return <AlertTriangle className={className} />;
       case 'major_outage':   return <X className={className} />;
       case 'maintenance':    return <Wrench className={className} />;
@@ -160,14 +181,17 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
         } else {
           validSlotCount++;
           // Determine worst status in interval
-          const hasOutage = matchingLogs.some(m => !m.is_operational || m.status_code >= 500);
+          const hasRateLimit = matchingLogs.some(m => m.status_code === 429);
+          const hasOutage = matchingLogs.some(m => (!m.is_operational || m.status_code >= 500) && m.status_code !== 429);
           const hasDegraded = matchingLogs.some(
-            m => m.response_time_ms > latencyThresholdMs || (m.status_code >= 400 && m.status_code !== 401)
+            m => m.response_time_ms > latencyThresholdMs || (m.status_code >= 400 && m.status_code !== 401 && m.status_code !== 429)
           );
 
           let entryStatus: CheckEntry['status'] = 'operational';
           if (hasOutage) {
             entryStatus = 'outage';
+          } else if (hasRateLimit) {
+            entryStatus = 'rate_limited';
           } else if (hasDegraded) {
             entryStatus = 'degraded';
           } else {
@@ -177,15 +201,20 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
           const avgMs = Math.round(
             matchingLogs.reduce((acc, m) => acc + m.response_time_ms, 0) / matchingLogs.length
           );
-          const latestCode = matchingLogs[matchingLogs.length - 1].status_code;
+          const latestLog = matchingLogs[matchingLogs.length - 1];
 
           entries.push({
             date: new Date(bStart).toISOString(),
             endDate: new Date(bEnd).toISOString(),
             status: entryStatus,
             responseTimeMs: avgMs,
-            statusCode: latestCode,
+            statusCode: latestLog.status_code,
             checkCount: matchingLogs.length,
+            remainingTokens: latestLog.remaining_tokens,
+            tokenLimit: latestLog.token_limit,
+            maxParallelRequests: latestLog.max_parallel_requests,
+            keySpend: latestLog.key_spend,
+            keyMaxBudget: latestLog.key_max_budget,
           });
         }
       }
@@ -272,7 +301,14 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
           const uptime24h = compData.uptime24h;
 
           return (
-            <div key={comp.id} className="p-5 flex flex-col gap-3.5 relative">
+            <div
+              key={comp.id}
+              className={`p-5 flex flex-col gap-3.5 relative transition-all duration-300 ${
+                comp.status === 'rate_limited'
+                  ? 'bg-amber-500/[0.03] dark:bg-amber-500/[0.05] ring-1 ring-amber-500/40 dark:ring-amber-500/50 shadow-sm shadow-amber-500/10 rounded-lg'
+                  : ''
+              }`}
+            >
               {/* Component Name and Status Header */}
               <div className="flex justify-between items-center flex-wrap gap-2">
                 <div className="flex items-center gap-2.5">
@@ -285,6 +321,12 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
                 </div>
 
                 <div className="flex items-center gap-2 group relative flex-wrap justify-end">
+                  {comp.status === 'rate_limited' && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 animate-pulse">
+                      <Zap size={11} className="shrink-0" />
+                      <span>HTTP 429</span>
+                    </span>
+                  )}
                   <span className="text-[11px] font-mono font-medium text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/40 px-2 py-0.5 rounded border border-gray-200/50 dark:border-gray-800">
                     {uptime24h}% (24h)
                   </span>
@@ -294,6 +336,116 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
                   {getStatusIcon(comp.status)}
                 </div>
               </div>
+
+              {/* Live Quota & Usage Limits Visual Dashboard */}
+              {(comp.remainingTokens != null || comp.maxParallelRequests != null || comp.keySpend != null) && (() => {
+                const maxReq = comp.maxParallelRequests ?? 3;
+                const remReq = comp.remainingParallelRequests ?? maxReq;
+                const inUseSlots = Math.max(0, maxReq - remReq);
+                const isCapReached = inUseSlots >= maxReq || comp.status === 'rate_limited';
+
+                const tokenLimit = comp.tokenLimit ?? 1000000;
+                const remTokens = comp.remainingTokens ?? tokenLimit;
+                const tokenPct = Math.min(100, Math.max(0, Math.round((remTokens / tokenLimit) * 100)));
+
+                const budget = comp.keyMaxBudget ?? 50;
+                const spend = comp.keySpend ?? 0;
+                const budgetPct = Math.min(100, Math.max(0, Math.round((spend / budget) * 100)));
+
+                return (
+                  <div className="rounded-xl border border-gray-200/80 dark:border-gray-800/80 bg-gray-50/70 dark:bg-gray-800/40 p-3.5 flex flex-col gap-3 text-xs">
+                    {/* Header line with badge and clarifying subtitle */}
+                    <div className="flex items-center justify-between gap-2 pb-2 border-b border-gray-200/70 dark:border-gray-700/50">
+                      <div className="flex items-center gap-1.5 font-semibold text-gray-800 dark:text-gray-200 text-[11.5px]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        <span>{t('componentList.quotaTitle')}</span>
+                      </div>
+                      <span className="text-[11px] text-gray-400 dark:text-gray-500 font-sans hidden sm:inline">
+                        {t('componentList.tierSubtitle')}
+                      </span>
+                    </div>
+
+                    {/* Gauges Row */}
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                      {/* 1. Concurrency Slots Meter */}
+                      <div className="flex items-center gap-3 w-full md:w-auto" title={t('componentList.concurrencyNotice', { max: maxReq })}>
+                        <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300 font-medium shrink-0">
+                          <Users size={14} className={isCapReached ? "text-amber-500" : "text-blue-500"} />
+                          <span className="text-[12px]">{t('componentList.maxConcurrency')}:</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: maxReq }).map((_, i) => {
+                              const isFilled = i < inUseSlots;
+                              return (
+                                <div
+                                  key={i}
+                                  className={`w-3.5 h-5 rounded-xs transition-all duration-300 ${
+                                    isFilled
+                                      ? isCapReached
+                                        ? 'bg-amber-500 shadow-xs shadow-amber-500/60 animate-pulse'
+                                        : 'bg-blue-500 dark:bg-blue-400 shadow-2xs'
+                                      : 'bg-gray-200 dark:bg-gray-700/80 border border-gray-300/70 dark:border-gray-600/60'
+                                  }`}
+                                  title={isFilled ? `Slot ${i + 1}: In use` : `Slot ${i + 1}: Free`}
+                                />
+                              );
+                            })}
+                          </div>
+                          <span className={`font-mono text-[11.5px] font-semibold ${isCapReached ? 'text-amber-600 dark:text-amber-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                            {inUseSlots}/{maxReq}
+                          </span>
+                          {isCapReached && (
+                            <span className="text-[10px] text-amber-700 dark:text-amber-300 font-bold bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded-full">
+                              Cap Reached
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 2. Token Capacity Bar (TPM) */}
+                      <div className="flex items-center gap-2.5 w-full md:w-auto border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-700/60 pt-2.5 md:pt-0 md:pl-3.5" title={t('componentList.tpmCapNotice', { limit: (tokenLimit / 1000000).toFixed(0) + 'M' })}>
+                        <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300 font-medium shrink-0">
+                          <Gauge size={14} className="text-emerald-500" />
+                          <span className="text-[12px]">{t('componentList.remainingTokens')}:</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-24 sm:w-28 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                tokenPct < 20 ? 'bg-amber-500' : 'bg-emerald-500'
+                              }`}
+                              style={{ width: `${tokenPct}%` }}
+                            />
+                          </div>
+                          <span className="font-mono text-[11px] text-gray-700 dark:text-gray-300 font-medium">
+                            {(remTokens / 1000).toFixed(0)}k ({tokenPct}%)
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* 3. Key Spend / Budget Bar */}
+                      <div className="flex items-center gap-2.5 w-full md:w-auto border-t md:border-t-0 md:border-l border-gray-200 dark:border-gray-700/60 pt-2.5 md:pt-0 md:pl-3.5">
+                        <div className="flex items-center gap-1.5 text-gray-700 dark:text-gray-300 font-medium shrink-0">
+                          <CreditCard size={14} className="text-indigo-500" />
+                          <span className="text-[12px]">{t('componentList.keyBudget')}:</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 sm:w-20 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-indigo-500 transition-all duration-500"
+                              style={{ width: `${budgetPct}%` }}
+                            />
+                          </div>
+                          <span className="font-mono text-[11px] text-gray-700 dark:text-gray-300 font-medium">
+                            ${spend.toFixed(2)} / ${budget.toFixed(0)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* View Mode 1: 288 Multi-row Check Blocks (Quantized 5-min buckets) */}
               {viewMode === '288' && (
@@ -338,37 +490,51 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
                     </span>
                     <span className="flex items-center gap-1">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>{t('common.now')}</span>
+                      <span>{t('chart.now')}</span>
                     </span>
                   </div>
                 </div>
               )}
 
-              {/* View Mode 2: 90 Days Daily Aggregates */}
+              {/* View Mode 2: 90-Day Uptime Calendar Bars */}
               {viewMode === '90d' && (
                 <div className="w-full pt-1">
-                  <svg
-                    className="w-full h-[34px]"
-                    preserveAspectRatio="none"
-                    viewBox="0 0 450 34"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    {comp.uptimeDays.map((day, dayIdx) => (
-                      <rect
-                        key={dayIdx}
-                        height="34"
-                        width="3.5"
-                        x={dayIdx * 5}
-                        y="0"
-                        rx="1"
-                        fill={getStatusColor(day.status)}
-                        onClick={() => copyCheckData(comp.name, day)}
-                        className="hover:opacity-75 cursor-pointer transition-opacity"
-                      >
-                        <title>{`${comp.name}\n${dayjs(day.date).format('MMM D, YYYY')}\n${day.status}\n\n${t('uptimeGrid.clickToCopyDiagnostic')}`}</title>
-                      </rect>
-                    ))}
-                  </svg>
+                  <div className="flex items-center gap-[2px] sm:gap-[3px] py-1">
+                    {comp.uptimeDays.map((day, dayIdx) => {
+                      const hasData = day.status !== 'no-data';
+                      const formattedDate = dayjs(day.date).format('MMM D, YYYY');
+
+                      return (
+                        <div
+                          key={dayIdx}
+                          onClick={() => copyCheckData(comp.name, { date: day.date, status: day.status })}
+                          className={`flex-1 h-8 sm:h-9 rounded-[2px] cursor-pointer transition-all duration-150 hover:scale-y-110 hover:brightness-110 shadow-2xs group relative ${
+                            !hasData ? 'opacity-30 dark:opacity-20' : ''
+                          }`}
+                          style={{ backgroundColor: getStatusColor(day.status) }}
+                        >
+                          {/* Rich Floating Tooltip on Day Hover */}
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center pointer-events-none z-40">
+                            <div className="bg-gray-900/95 dark:bg-gray-800/95 backdrop-blur-sm text-white text-xs py-2 px-3 rounded-lg shadow-xl border border-gray-700/80 whitespace-nowrap">
+                              <div className="font-semibold text-[11px] mb-1 text-gray-200">{formattedDate}</div>
+                              <div className="flex items-center gap-2 text-[11px] font-mono">
+                                <span className="capitalize" style={{ color: getStatusColor(day.status) }}>
+                                  {day.status}
+                                </span>
+                                {day.uptimePercentage !== undefined && (
+                                  <span className="text-gray-400">· {day.uptimePercentage}%</span>
+                                )}
+                              </div>
+                              <div className="text-[9px] text-gray-400 mt-1 pt-1 border-t border-gray-700/60 text-center">
+                                {t('chart.clickToCopy')}
+                              </div>
+                            </div>
+                            <div className="w-2 h-2 bg-gray-900 dark:bg-gray-800 rotate-45 -mt-1 border-r border-b border-gray-700/80" />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
 
                   {/* Inline 90d Legend */}
                   <div className="flex justify-between items-center text-[12px] text-gray-400 dark:text-gray-500 mt-2 font-mono">
@@ -412,17 +578,30 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
           </div>
 
           {hoveredCheck.entry.status !== 'no-data' ? (
-            <div className="flex items-center gap-3 text-[11px] font-mono mt-1 pt-1 border-t border-gray-800">
-              <span className="font-bold text-white">
-                {hoveredCheck.entry.responseTimeMs}ms
-              </span>
-              <span className="text-gray-400">
-                HTTP {hoveredCheck.entry.statusCode || 200}
-              </span>
-              {hoveredCheck.entry.checkCount > 1 && (
-                <span className="text-[10px] text-blue-400 bg-blue-950/60 px-1 rounded">
-                  {hoveredCheck.entry.checkCount} pings
+            <div className="space-y-1 mt-1 pt-1 border-t border-gray-800">
+              <div className="flex items-center gap-3 text-[11px] font-mono">
+                <span className="font-bold text-white">
+                  {hoveredCheck.entry.responseTimeMs}ms
                 </span>
+                <span className={hoveredCheck.entry.statusCode === 429 ? "text-amber-400 font-bold" : "text-gray-400"}>
+                  HTTP {hoveredCheck.entry.statusCode || 200}
+                </span>
+                {hoveredCheck.entry.checkCount > 1 && (
+                  <span className="text-[10px] text-blue-400 bg-blue-950/60 px-1 rounded">
+                    {hoveredCheck.entry.checkCount} pings
+                  </span>
+                )}
+              </div>
+
+              {(hoveredCheck.entry.remainingTokens != null || hoveredCheck.entry.maxParallelRequests != null) && (
+                <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono text-gray-300 pt-0.5">
+                  {hoveredCheck.entry.remainingTokens != null && (
+                    <span>Tokens: {hoveredCheck.entry.remainingTokens.toLocaleString()}</span>
+                  )}
+                  {hoveredCheck.entry.maxParallelRequests != null && (
+                    <span>Max Req: {hoveredCheck.entry.maxParallelRequests}</span>
+                  )}
+                </div>
               )}
             </div>
           ) : (
@@ -444,6 +623,9 @@ export const ComponentList: React.FC<ComponentListProps> = ({ components, recent
         </div>
         <div className="flex items-center gap-2">
           <Minus className="w-4 h-4 text-[#eab308]" /> {t('componentList.degraded')}
+        </div>
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-[#f59e0b]" /> {t('componentList.rateLimited')}
         </div>
         <div className="flex items-center gap-2">
           <X className="w-4 h-4 text-[#ef4444]" /> {t('componentList.majorOutage')}

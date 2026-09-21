@@ -27,6 +27,7 @@ export interface Translations {
   };
   tabs: {
     currentStatus: string;
+    limits: string;
     incidents: string;
     uptime: string;
     admin: string;
@@ -58,6 +59,71 @@ export interface Translations {
     uptime90Summary: string;
     copiedComponentData: string;
     noPingRecorded: string;
+    rateLimited: string;
+    quotaExhausted: string;
+    quotaTitle: string;
+    remainingTokens: string;
+    maxConcurrency: string;
+    keyBudget: string;
+    tpmTokens: string;
+    concurrencySlots: string;
+    concurrencyNotice: string;
+    tpmCapNotice: string;
+    tierSubtitle: string;
+  };
+  rateLimitBanner: {
+    title: string;
+    desc: string;
+    concurrencyInUse: string;
+    concurrencyFull: string;
+    concurrencyAvailable: string;
+    tokensAvailable: string;
+    budgetUsed: string;
+    viewFaqBtn: string;
+  };
+  usageLimits: {
+    title: string;
+    subtitle: string;
+    allNormal: string;
+    throttledNotice: string;
+    concurrencyTitle: string;
+    concurrencyDesc: string;
+    tokensTitle: string;
+    tokensDesc: string;
+    budgetTitle: string;
+    budgetDesc: string;
+    remaining: string;
+    used: string;
+    capacity: string;
+    freeSlots: string;
+    perModelTitle: string;
+    perModelSubtitle: string;
+    historyTitle: string;
+    historySubtitle: string;
+    no429In24h: string;
+    recent429Found: string;
+    colTimestamp: string;
+    colEndpoint: string;
+    colStatus: string;
+    colDetails: string;
+    devTipsTitle: string;
+    devTipsDesc: string;
+    quickSwitchFaq: string;
+  };
+  faq: {
+    title: string;
+    subtitle: string;
+    tagRateLimit: string;
+    tagQuota: string;
+    tagTransparency: string;
+    q1Title: string;
+    q1Answer: string;
+    q2Title: string;
+    q2Answer: string;
+    q3Title: string;
+    q3Answer: string;
+    q4Title: string;
+    q4Answer: string;
   };
   chart: {
     title: string;
@@ -254,6 +320,7 @@ export const translations: Record<Language, Translations> = {
     },
     tabs: {
       currentStatus: 'สถานะปัจจุบัน',
+      limits: 'โควตา & ขีดจำกัด',
       incidents: 'เหตุขัดข้อง',
       uptime: 'ความพร้อมใช้งาน (Uptime)',
       admin: '⚙ จัดการระบบ',
@@ -285,6 +352,71 @@ export const translations: Record<Language, Translations> = {
       uptime90Summary: 'ความพร้อมใช้งาน {pct}%',
       copiedComponentData: 'คัดลอกข้อมูล {name} แล้ว ({time})',
       noPingRecorded: 'ไม่มีการบันทึกข้อมูลการตรวจสอบ',
+      rateLimited: 'จำกัดการใช้งาน (Rate Limited)',
+      quotaExhausted: 'โควตาเต็ม (Quota Exhausted)',
+      quotaTitle: 'เกณฑ์โควตาต่อบัญชี (Account Tier Cap)',
+      remainingTokens: 'โควตา Token (TPM)',
+      maxConcurrency: 'คำขอพร้อมกันต่อ Key',
+      keyBudget: 'งบประมาณ Key (บอทมอนิเตอร์)',
+      tpmTokens: 'TPM Tokens',
+      concurrencySlots: 'คำขอพร้อมกัน',
+      concurrencyNotice: 'เกตเวย์จำกัด Concurrency ไว้สูงสุด {max} คำขอพร้อมกันต่อ Key',
+      tpmCapNotice: 'จำกัดปริมาณโทเค็นไว้ที่ {limit} โทเค็นต่อนาที (TPM)',
+      tierSubtitle: 'เกณฑ์จำกัดโควตาระดับบัญชีที่เกตเวย์กำหนดให้แต่ละ API Key ตาม Response Headers',
+    },
+    rateLimitBanner: {
+      title: 'ตรวจพบการติด Usage / Rate Limit (HTTP 429)',
+      desc: 'เกตเวย์กำลังจำกัดการประมวลผลชั่วคราว (เซิร์ฟเวอร์และโมเดลไม่ได้ล่ม) เนื่องจากมีคำขอใช้งานพร้อมกันเกิน 3 รายการ หรือเกินเพดาน 1,000,000 tokens/นาที แนะนำให้เว้นช่วงการส่งคำขอสักครู่แล้วลองใหม่อีกครั้ง',
+      concurrencyInUse: '{inUse} จาก {total} คำขอกำลังประมวลผล',
+      concurrencyFull: 'เต็มเพดาน Concurrency (3/3) — คำขอถัดไปจะได้รับ HTTP 429 ชั่วคราว',
+      concurrencyAvailable: 'ว่าง {available} สล็อต Concurrency พร้อมรับคำขอ',
+      tokensAvailable: 'โควตา Token คงเหลือในรอบปัจจุบัน',
+      budgetUsed: 'ยอดงบประมาณ Key ที่ใช้ไป',
+      viewFaqBtn: 'ทำความเข้าใจ Limit & วิธีแก้ (FAQ) ↓',
+    },
+    usageLimits: {
+      title: 'โควตาและการจำกัดสิทธิ์ (Usage & Rate Limits)',
+      subtitle: 'ติดตามเพดานการใช้งาน (Per-Key Tier Cap) และอัตราคงเหลือแบบเรียลไทม์จาก Gateway Response Headers',
+      allNormal: 'อัตราการใช้งานปกติ — ไม่พบการจำกัดคำขอ',
+      throttledNotice: 'ตรวจพบการจำกัดคำขอ (HTTP 429) — เกตเวย์กำลังหน่วงคำขอชั่วคราว',
+      concurrencyTitle: 'คำขอพร้อมกัน (Concurrency)',
+      concurrencyDesc: 'ความจุการรับส่งคำขอประมวลผลพร้อมกันในเสี้ยววินาที (ว่างทันทีที่ประมวลผลเสร็จ)',
+      tokensTitle: 'โควตาโทเค็นต่อนาที (TPM)',
+      tokensDesc: 'เพดานปริมาณโทเค็นรวมต่อ 1 นาที (รีเซ็ตใหม่ทุกๆ 60 วินาที)',
+      budgetTitle: 'วงเงินทดสอบสะสม (Key Budget)',
+      budgetDesc: 'งบประมาณสะสมของ API Key ประจำบอทมอนิเตอร์ในรอบเดือน ($50/เดือน)',
+      remaining: 'คงเหลือ',
+      used: 'ใช้ไปแล้ว',
+      capacity: 'ความจุทั้งหมด',
+      freeSlots: 'ว่าง {free} จาก {max} ช่อง',
+      perModelTitle: 'สถานะโควตารายบริการ & โมเดล',
+      perModelSubtitle: 'รายละเอียดความพร้อมของช่องประมวลผลและโควตาคงเหลือของแต่ละโมเดล',
+      historyTitle: 'ประวัติการติด Rate Limit (429 Logs ใน 24 ชม.)',
+      historySubtitle: 'บันทึกเหตุการณ์ที่คำขอตรวจสุขภาพของบอทพบ HTTP 429 ในช่วง 24 ชั่วโมงที่ผ่านมา',
+      no429In24h: 'ไม่พบเหตุการณ์ติด Rate Limit (429) ในช่วง 24 ชม. ที่ผ่านมา — การประมวลผลราบรื่น 100%',
+      recent429Found: 'พบการติด 429 ทั้งหมด {count} ครั้งในช่วง 24 ชั่วโมงที่ผ่านมา',
+      colTimestamp: 'เวลาที่ตรวจพบ',
+      colEndpoint: 'โมเดล / บริการ',
+      colStatus: 'สถานะ',
+      colDetails: 'รายละเอียดการจำกัด',
+      devTipsTitle: 'คำแนะนำสำหรับนักพัฒนาเพื่อเลี่ยง HTTP 429',
+      devTipsDesc: 'การส่งคำขอแบบมี Semaphore หรือ Concurrency Pool ขนาดไม่เกิน 3 คำขอ พร้อมการทำ Exponential Backoff (รอ 2-5 วินาทีเมื่อพบ 429) จะช่วยให้แอปพลิเคชันทำงานได้ราบรื่นที่สุด',
+      quickSwitchFaq: 'อ่านคำถามที่พบบ่อย (FAQ) ด้านล่าง ↓',
+    },
+    faq: {
+      title: 'คำถามที่พบบ่อยเกี่ยวกับโควตา & Rate Limit (FAQ)',
+      subtitle: 'รวมคำตอบข้อสงสัยสำหรับสมาชิกชุมชน 9ARM AI PASSPORT และผู้ใช้งานเกตเวย์',
+      tagRateLimit: 'Rate Limit (HTTP 429)',
+      tagQuota: 'โควตา & วงเงิน',
+      tagTransparency: 'ความโปร่งใสของข้อมูล',
+      q1Title: 'ติด Error HTTP 429 (Too Many Requests) ต้องทำอย่างไร? ต้องรอกี่วันหรือรอข้ามคืนไหม?',
+      q1Answer: 'ไม่ต้องรอเป็นวันครับ! มากกว่า 90% ของกรณีที่เจอเกิดจาก "Concurrency ชนกัน" (ส่งคำขอพร้อมกันเกิน 3 งานในเสี้ยววินาที เช่น Agent รันงานย่อยพร้อมกันหลายหน้าต่าง) วิธีแก้คือรอเพียง 2–5 วินาทีให้คำขอก่อนหน้าตอบเสร็จแล้วกดส่งใหม่ได้ทันที แต่หากเป็นการส่งโค้ดก้อนใหญ่มากๆ รัวๆ ติดต่อกัน ให้รอ 30–60 วินาทีเพื่อให้รอบนาทีรีเซ็ตครับ',
+      q2Title: 'สรุปแล้ว Gateway กำหนดระบบ Usage Limit ไว้อย่างไรบ้าง? (ระดับวินาที / นาที / เดือน)',
+      q2Answer: 'เกตเวย์แบ่งเกณฑ์จำกัดออกเป็น 3 ระดับอย่างชัดเจน:\n1. Concurrency (ระดับวินาที): จำกัดสูงสุด 3 คำขอพร้อมกันต่อ 1 API Key (สล็อตจะว่างทันทีที่คำขอก่อนหน้าตอบเสร็จ)\n2. Token Limit (ระดับนาที - TPM): สูงสุด 1,000,000 โทเค็นต่อนาที โดยจะรีเซ็ตใหม่ทุกๆ 60 วินาที\n3. Budget Limit (ระดับรอบสมาชิก): วงเงิน $50 ต่อรอบสมาชิกรายเดือน (คิดเป็นประมาณ 50,000,000 โทเค็นต่อเดือน ซึ่งเพียงพอต่อการใช้งานทั่วไปอย่างเหลือเฟือ)',
+      q3Title: 'ตัวเลข "คำขอพร้อมกัน 3 คำขอ" หมายถึงทั้งเซิร์ฟเวอร์รับได้แค่นี้หรือเปล่า?',
+      q3Answer: 'ไม่ใช่ครับ! ตัวเลข 3 คำขอนี้เป็น "เพดานประจำแต่ละ API Key (Per-Account Tier Cap)" ไม่ใช่ความจุของเครื่องเซิร์ฟเวอร์ เกตเวย์ตั้งเกณฑ์นี้ไว้เพื่อป้องกันไม่ให้มีใครยิงสแปมจนดึง GPU ส่วนรวม ผู้ใช้แต่ละท่านจะมีโควตา 3 คำขอของตนเองแยกกันโดยอิสระครับ',
+      q4Title: 'หน้า Status Page รู้ตัวเลขโควตาและงบประมาณเหล่านี้ได้อย่างไร? เป็นข้อมูลลับหลังบ้านหรือไม่?',
+      q4Answer: 'ไม่ได้เป็นข้อมูลลับแต่อย่างใดครับ! เกตเวย์ของนายอาร์มขับเคลื่อนด้วย LiteLLM Proxy ซึ่งเป็นระบบมาตรฐานที่ส่งตัวเลขโควตาและสถานะการจำกัดเหล่านี้มาใน "HTTP Response Headers" (เช่น x-ratelimit-api_key-* และ x-litellm-*) ให้กับไคลเอนต์ทุกคนอยู่แล้ว ทุกท่านสามารถตรวจสอบค่านี้ได้ด้วยตนเองผ่าน Network Tab (F12) หรือยิงผ่านคำสั่ง curl ได้เช่นเดียวกันครับ',
     },
     chart: {
       title: 'เวลาตอบสนองและความหน่วง',
@@ -479,6 +611,7 @@ export const translations: Record<Language, Translations> = {
     },
     tabs: {
       currentStatus: 'Current Status',
+      limits: 'Usage & Limits',
       incidents: 'Incidents',
       uptime: 'Uptime',
       admin: '⚙ Admin',
@@ -510,6 +643,71 @@ export const translations: Record<Language, Translations> = {
       uptime90Summary: '{pct}% uptime',
       copiedComponentData: 'Copied {name} data ({time})',
       noPingRecorded: 'No ping recorded',
+      rateLimited: 'Usage / Rate Limited',
+      quotaExhausted: 'Quota Exhausted',
+      quotaTitle: 'Account Tier Limits (Per-Key Cap)',
+      remainingTokens: 'Token Quota (TPM)',
+      maxConcurrency: 'Max Concurrent / Key',
+      keyBudget: 'Key Budget (Monitor Key)',
+      tpmTokens: 'TPM Tokens',
+      concurrencySlots: 'Parallel Requests',
+      concurrencyNotice: 'Gateway enforces a concurrency cap of {max} simultaneous requests per key',
+      tpmCapNotice: 'Token volume capped at {limit} tokens per minute (TPM)',
+      tierSubtitle: 'Per-account rate limits enforced on each API key via gateway response headers',
+    },
+    rateLimitBanner: {
+      title: 'Usage / Rate Limit Active (HTTP 429)',
+      desc: 'The gateway is currently throttling requests (upstream model is operational) because concurrent requests exceeded 3 or token generation surpassed 1M TPM. Please stagger requests and retry shortly.',
+      concurrencyInUse: '{inUse} of {total} slots currently processing',
+      concurrencyFull: 'Concurrency cap reached (3/3) — subsequent requests will encounter HTTP 429',
+      concurrencyAvailable: '{available} concurrency slot(s) available for new requests',
+      tokensAvailable: 'Remaining Token Quota in current window',
+      budgetUsed: 'Key budget utilized to date',
+      viewFaqBtn: 'Understand Limits & Fixes (FAQ) ↓',
+    },
+    usageLimits: {
+      title: 'Usage Quotas & Rate Limits',
+      subtitle: 'Real-time telemetry tracking per-key tier caps and quota headroom from gateway response headers',
+      allNormal: 'All Quotas Normal — No throttling active',
+      throttledNotice: 'Rate Limiting Active (HTTP 429) — Gateway is temporarily throttling requests',
+      concurrencyTitle: 'Parallel Requests (Concurrency)',
+      concurrencyDesc: 'Real-time in-flight slots (frees up the moment each inference finishes)',
+      tokensTitle: 'Tokens Per Minute (TPM)',
+      tokensDesc: 'Token volume ceiling per 1-minute window (resets rolling every 60 seconds)',
+      budgetTitle: 'Monitor Key Budget',
+      budgetDesc: 'Accumulated monthly spend of the monitor testing key ($50/month allocation)',
+      remaining: 'Remaining',
+      used: 'Used',
+      capacity: 'Capacity',
+      freeSlots: '{free} of {max} slots free',
+      perModelTitle: 'Per-Service & Model Quota Status',
+      perModelSubtitle: 'Slot availability and quota headroom breakdown by model endpoint',
+      historyTitle: 'Rate Limit Incidents (429 Logs in Past 24h)',
+      historySubtitle: 'Incidents where health checks received HTTP 429 in the past 24 hours',
+      no429In24h: 'No HTTP 429 rate limit events recorded in the past 24 hours — 100% smooth processing',
+      recent429Found: '{count} rate limit event(s) recorded in the past 24 hours',
+      colTimestamp: 'Timestamp',
+      colEndpoint: 'Service / Model',
+      colStatus: 'Status',
+      colDetails: 'Throttling Details',
+      devTipsTitle: 'Developer Guidelines to Avoid HTTP 429',
+      devTipsDesc: 'Use an in-process semaphore or concurrency pool capped at <= 3 parallel requests with exponential backoff (retry after 2–5s) for optimal throughput.',
+      quickSwitchFaq: 'Jump to FAQ & Q&A below ↓',
+    },
+    faq: {
+      title: 'Frequently Asked Questions (FAQ)',
+      subtitle: 'Clear answers on Gateway Rate Limits, Concurrency, and Token Quotas for community members',
+      tagRateLimit: 'Rate Limit (HTTP 429)',
+      tagQuota: 'Quotas & Budget',
+      tagTransparency: 'Data Transparency',
+      q1Title: 'Encountered HTTP 429 (Too Many Requests)? Do I have to wait a day or overnight?',
+      q1Answer: 'No, you do not have to wait a day! Over 90% of 429 errors are due to instantaneous concurrency overlap (more than 3 simultaneous requests in flight at the exact same split-second, e.g. parallel IDE agents). Simply wait 2–5 seconds for preceding requests to finish and retry. If you streamed multiple massive prompts consecutively, wait 30–60 seconds for the 1-minute window to reset.',
+      q2Title: 'What are the exact usage limits enforced on the gateway? (Second, Minute, Monthly)',
+      q2Answer: 'Limits are structured across 3 distinct tiers:\n1. Concurrency (Real-time): Maximum 3 simultaneous requests per API Key (slots free up the moment previous responses complete).\n2. Token Volume (Per-Minute - TPM): Capped at 1,000,000 tokens per minute, resetting every 60 seconds.\n3. Key Budget (Per-Month): $50 allocated per 9ARM AI PASSPORT subscription period (~50 million tokens/month, which is extraordinarily generous for development workflows).',
+      q3Title: 'Does "3 Max Concurrent Requests" mean the entire server only supports 3 users globally?',
+      q3Answer: 'No! The 3-request limit is an individual Per-Account Tier Cap enforced per API key to prevent any single automated tool from monopolizing GPU clusters. Each user/key has their own independent 3-concurrency allocation.',
+      q4Title: 'How does this Status Page obtain these quota numbers? Is this private internal data?',
+      q4Answer: 'Not private at all! The gateway runs LiteLLM Proxy, which by industry standard injects rate limit and key budget telemetry directly into public HTTP Response Headers (e.g. x-ratelimit-api_key-* and x-litellm-*). Any developer can inspect these exact headers in Chrome DevTools (F12) or via curl -I.',
     },
     chart: {
       title: 'Response Time & Latency',

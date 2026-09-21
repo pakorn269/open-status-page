@@ -41,7 +41,16 @@ An open-source, community-run status monitor for **[gateway.9arm.co](https://gat
 - **Automated incident lifecycle** — auto-creates incidents on hard outages/severe latency and auto-resolves when services normalize
 - **Admin portal (`/admin`)** — post, edit, resolve, and delete incidents directly from the web UI (authenticated via Supabase Service Role Key)
 - **Dark mode** — persisted via `localStorage`, respects OS preference
-- **URL-synced tabs** — `/`, `/incidents`, `/uptime`, `/admin` with browser back/forward support
+- **Usage & Rate Limits Dashboard (`/limits`)** — dedicated real-time telemetry dashboard monitoring **Per-Key Tier Caps** parsed from gateway response headers (`x-ratelimit-*`, `x-litellm-*`):
+  - ⚡ **Concurrency Slots**: Tracks in-flight parallel processing (`0/3` to `3/3`), slot indicator states, and **% remaining** capacity.
+  - 🎟️ **Tokens Per Minute (TPM)**: Live progress bar of remaining token quota against the 1,000,000 TPM limit (rolling 60s window).
+  - 💳 **Monthly Key Budget**: Monitor bot's monthly spend tracking against the $50 account cap with % budget remaining.
+  - 📊 **Per-Model Quota Breakdown**: Slot availability and token headroom for each configured model endpoint.
+  - 🕒 **24-Hour 429 Incident Log**: Audits and displays rate-limiting occurrences over the past 24 hours.
+  - 💡 **Developer Best Practices**: Recommendations on semaphore pooling (<= 3 requests) and exponential backoff retry strategies.
+  - ❓ **Bilingual Community FAQ**: Interactive accordion resolving community questions on HTTP 429 error resolution, quota reset cycles, and data transparency.
+- **HTTP 429 Rate-Limit Classification & Alerts** — distinguishes rate limiting (429) from hard server failures (5xx); displays an amber glowing alert banner on the status page and dispatches dedicated Thai Telegram notifications
+- **URL-synced tabs** — `/`, `/incidents`, `/uptime`, `/admin` with browser back/forward support and alert notification pulse badges
 - **Auto-refresh** — polls for new data silently every 60 seconds
 
 ---
@@ -108,8 +117,9 @@ Edit `.env` with your values:
 Run these SQL files **in order** in the [Supabase SQL Editor](https://supabase.com/dashboard/project/_/sql):
 
 ```
-1. supabase/setup_api_logs.sql   — Creates api_status_logs table + get_uptime_90_days() RPC
-2. supabase/setup.sql            — Creates incidents table + seeds sample data + schedules cron job
+1. supabase/setup_api_logs.sql       — Creates api_status_logs table + get_uptime_90_days() RPC
+2. supabase/setup.sql                — Creates incidents table + seeds sample data + schedules cron job
+3. supabase/upgrade_usage_limits.sql — Adds telemetry columns (remaining_tokens, key_spend, etc.) + 429 rate_limited uptime logic
 ```
 
 > **Before running `setup.sql`:** Replace `YOUR_PROJECT_REF` on the last line with your actual Supabase project reference ID.
@@ -196,7 +206,10 @@ open-status-page/
 │   │   ├── Announcements.tsx        # Contextual notice banner & Change History modal
 │   │   ├── SubscribeModal.tsx       # Telegram subscription modal (@gateway9armstatus)
 │   │   ├── StatusBanner.tsx         # Animated status indicator with 24h incident badge
+│   │   ├── RateLimitNoticeBanner.tsx # Amber alert banner for active HTTP 429 rate limiting
 │   │   ├── ComponentList.tsx        # Multi-service list + 288-check grid & click-to-copy
+│   │   ├── UsageLimitsTab.tsx       # Usage limits dashboard, gauges (% remaining), per-model breakdown, & 429 logs
+│   │   ├── FaqSection.tsx           # Bilingual community FAQ accordion for rate limits & quotas
 │   │   ├── ResponseTimeChart.tsx    # Multi-color 24h latency chart with endpoint filter tabs
 │   │   ├── UptimeGrid.tsx           # 90-day calendar uptime grid with service selector
 │   │   ├── IncidentHistory.tsx      # Full incident log with component & impact filters
@@ -215,11 +228,12 @@ open-status-page/
 ├── supabase/
 │   ├── functions/
 │   │   └── health-check/
-│   │       ├── index.ts             # Parallel multi-endpoint check & Telegram broadcast logic
+│   │       ├── index.ts             # Parallel multi-endpoint check, 429 detection & Telegram broadcast logic
 │   │       └── deno.json            # Deno compiler config for IDE support
 │   ├── setup.sql                    # incidents table + cron schedule
 │   ├── setup_api_logs.sql           # api_status_logs table + 90-day uptime RPC
-│   └── upgrade_uptime_rpc.sql       # Per-endpoint weighted 90-day uptime RPC
+│   ├── upgrade_uptime_rpc.sql       # Per-endpoint weighted 90-day uptime RPC
+│   └── upgrade_usage_limits.sql     # Telemetry columns migration + 429 rate-limited RPC
 ├── .env.example                     # Environment variable template
 └── DESIGN.md                        # Design system reference
 ```
