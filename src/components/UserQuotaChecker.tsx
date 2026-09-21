@@ -113,8 +113,11 @@ export const UserQuotaChecker: React.FC = () => {
     setError(null);
   };
 
-  const curlCommand = `curl -i https://gateway.9arm.co/v1/models \\
-  -H "x-api-key: ${apiKey.trim() || 'YOUR_API_KEY'}"`;
+  const curlCommand = `curl -i https://gateway.9arm.co/v1/messages \\
+  -H "x-api-key: ${apiKey.trim() || 'YOUR_API_KEY'}" \\
+  -H "anthropic-version: 2023-06-01" \\
+  -H "content-type: application/json" \\
+  -d '{"model":"qwen3.8-27b-fp8","messages":[{"role":"user","content":"hi"}],"max_tokens":1}'`;
 
   const handleCopyCurl = async () => {
     try {

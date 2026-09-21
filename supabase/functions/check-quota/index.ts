@@ -120,28 +120,55 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 3. Query gateway.9arm.co /v1/models with the user's key
+    // 3. Query gateway.9arm.co /v1/messages with 1 token on Qwen FP8
+    // This allows LiteLLM to calculate exact key spend (x-litellm-key-spend) and all rate limit headers
     const startTime = Date.now();
-    const gatewayRes = await fetch('https://gateway.9arm.co/v1/models', {
-      method: 'GET',
+    let gatewayRes = await fetch('https://gateway.9arm.co/v1/messages', {
+      method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
         'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
       },
+      body: JSON.stringify({
+        model: 'qwen3.8-27b-fp8',
+        messages: [{ role: 'user', content: 'hi' }],
+        max_tokens: 1,
+      }),
     });
-    const latencyMs = Date.now() - startTime;
+    let latencyMs = Date.now() - startTime;
+
+    // Fallback to GET /v1/models if /v1/messages is unavailable (404/5xx)
+    if (gatewayRes.status === 404 || gatewayRes.status >= 500) {
+      const fallbackStart = Date.now();
+      const fallbackRes = await fetch('https://gateway.9arm.co/v1/models', {
+        method: 'GET',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+      });
+      if (fallbackRes.status === 200 || fallbackRes.status === 401) {
+        gatewayRes = fallbackRes;
+        latencyMs = Date.now() - fallbackStart;
+      }
+    }
 
     // 4. Extract telemetry headers
     const maxParallel = Number(gatewayRes.headers.get('x-ratelimit-api_key-limit-max_parallel_requests')) || 3;
     const remainingParallelHeader = gatewayRes.headers.get('x-ratelimit-api_key-remaining-max_parallel_requests');
     const remainingParallel = remainingParallelHeader !== null ? Number(remainingParallelHeader) : maxParallel;
 
-    const tokenLimit = Number(gatewayRes.headers.get('x-ratelimit-api_key-limit-tokens')) || 1000000;
-    const remainingTokensHeader = gatewayRes.headers.get('x-ratelimit-api_key-remaining-tokens');
+    const tokenLimit = Number(gatewayRes.headers.get('x-ratelimit-api_key-limit-tokens')) 
+      || Number(gatewayRes.headers.get('anthropic-ratelimit-tokens-limit'))
+      || 1000000;
+    const remainingTokensHeader = gatewayRes.headers.get('x-ratelimit-api_key-remaining-tokens')
+      || gatewayRes.headers.get('anthropic-ratelimit-tokens-remaining');
     const remainingTokens = remainingTokensHeader !== null ? Number(remainingTokensHeader) : tokenLimit;
 
     const keyMaxBudget = Number(gatewayRes.headers.get('x-litellm-key-max-budget')) || 50.0;
-    const keySpend = Number(gatewayRes.headers.get('x-litellm-key-spend')) || 0.0;
+    const keySpendHeader = gatewayRes.headers.get('x-litellm-key-spend');
+    const keySpend = keySpendHeader !== null ? Number(keySpendHeader) : 0.0;
 
     // Compute headroom percentages
     const parallelPctRemaining = Math.max(0, Math.min(100, Math.round((remainingParallel / maxParallel) * 100)));
