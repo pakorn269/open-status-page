@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   KeyRound, 
   ShieldCheck, 
@@ -16,7 +16,11 @@ import {
   Trash2,
   X,
   ExternalLink,
-  RotateCw
+  RotateCw,
+  Cpu,
+  Info,
+  CheckCircle2,
+  CircleDot
 } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
 import dayjs from 'dayjs';
@@ -46,6 +50,7 @@ export const UserQuotaChecker: React.FC = () => {
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<QuotaResult | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -53,6 +58,33 @@ export const UserQuotaChecker: React.FC = () => {
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [showCurlHelper, setShowCurlHelper] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Live elapsed seconds timer during loading
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | null = null;
+    if (loading) {
+      setElapsedSeconds(0);
+      timer = setInterval(() => {
+        setElapsedSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setElapsedSeconds(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [loading]);
+
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   // Cooldown countdown timer
   useEffect(() => {
@@ -74,6 +106,15 @@ export const UserQuotaChecker: React.FC = () => {
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ssqvojmcrubohsudmrta.supabase.co';
 
+  const handleCancel = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setLoading(false);
+    setError(t('userQuotaChecker.cancelledNotice'));
+  };
+
   const handleCheck = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const cleanKey = apiKey.trim();
@@ -82,9 +123,22 @@ export const UserQuotaChecker: React.FC = () => {
       return;
     }
 
+    // Cancel existing in-flight request if any
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setLoading(true);
     setError(null);
     setCooldown(3); // 3-second anti-spam cooldown
+
+    let didTimeout = false;
+    const timeoutId = setTimeout(() => {
+      didTimeout = true;
+      controller.abort();
+    }, 75000); // 75-second safe timeout for congested GPU cluster
 
     try {
       const endpoint = `${supabaseUrl}/functions/v1/check-quota`;
@@ -95,7 +149,9 @@ export const UserQuotaChecker: React.FC = () => {
           'x-user-api-key': cleanKey,
         },
         body: JSON.stringify({ apiKey: cleanKey }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       const data: QuotaResult = await res.json();
 
@@ -119,16 +175,34 @@ export const UserQuotaChecker: React.FC = () => {
         setIsModalOpen(false);
       }
     } catch (err: unknown) {
+      clearTimeout(timeoutId);
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        if (didTimeout) {
+          setError(t('userQuotaChecker.timeoutError'));
+        } else {
+          setError(t('userQuotaChecker.cancelledNotice'));
+        }
+        setResult(null);
+        setIsModalOpen(false);
+        return;
+      }
       const msg = err instanceof Error ? err.message : String(err);
       setError(`${t('userQuotaChecker.errorPrefix')} ${msg}`);
       setResult(null);
       setIsModalOpen(false);
     } finally {
+      clearTimeout(timeoutId);
+      abortControllerRef.current = null;
       setLoading(false);
     }
   };
 
   const handleClear = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setLoading(false);
     setApiKey('');
     setResult(null);
     setError(null);
@@ -295,7 +369,19 @@ export const UserQuotaChecker: React.FC = () => {
             )}
           </button>
 
-          {(apiKey || result) && (
+          {/* Cancel button during active wait */}
+          {loading && (
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-900/60 text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
+            >
+              <X size={14} />
+              <span>{t('userQuotaChecker.cancelBtn')}</span>
+            </button>
+          )}
+
+          {(apiKey || result) && !loading && (
             <button
               type="button"
               onClick={handleClear}
@@ -306,7 +392,7 @@ export const UserQuotaChecker: React.FC = () => {
             </button>
           )}
 
-          {result && result.valid && !isModalOpen && (
+          {result && result.valid && !isModalOpen && !loading && (
             <button
               type="button"
               onClick={() => setIsModalOpen(true)}
@@ -317,14 +403,163 @@ export const UserQuotaChecker: React.FC = () => {
             </button>
           )}
         </div>
+
+        {/* Pre-check Expectation Notice */}
+        <div className="flex items-start gap-2 pt-1 text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+          <Info size={13} className="shrink-0 text-blue-500 mt-0.5" />
+          <span>{t('userQuotaChecker.expectationNotice')}</span>
+        </div>
       </form>
 
       {/* Error Message */}
-      {error && (
+      {error && !loading && (
         <div className="mt-4 p-3.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5 animate-in fade-in duration-200">
           <AlertCircle size={16} className="shrink-0 mt-0.5 text-rose-500" />
           <div className="leading-relaxed">
             <span className="font-semibold">{error}</span>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* INTERACTIVE LIVE PROGRESS WAITING PANEL (When Loading) */}
+      {/* ========================================================================= */}
+      {loading && (
+        <div className="mt-4 p-4 sm:p-5 rounded-xl border border-blue-200 dark:border-blue-900/60 bg-gradient-to-br from-blue-50/70 via-white to-indigo-50/40 dark:from-blue-950/40 dark:via-gray-900 dark:to-indigo-950/20 shadow-xs space-y-4 animate-in fade-in duration-300">
+          {/* Header & Realtime Counter */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-blue-100 dark:border-blue-900/40">
+            <div className="flex items-center gap-2.5">
+              <div className="relative p-2 rounded-lg bg-blue-600 text-white shadow-xs shrink-0">
+                <Cpu size={18} className="animate-pulse" />
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                </span>
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <span>{t('userQuotaChecker.waitingTitle')}</span>
+                </h4>
+                <p className="text-[11.5px] text-blue-600 dark:text-blue-400 font-medium mt-0.5">
+                  {elapsedSeconds < 6 
+                    ? t('userQuotaChecker.waitingMsgPhase1')
+                    : elapsedSeconds < 16
+                    ? t('userQuotaChecker.waitingMsgPhase2')
+                    : elapsedSeconds < 31
+                    ? t('userQuotaChecker.waitingMsgPhase3')
+                    : t('userQuotaChecker.waitingMsgPhase4')}
+                </p>
+              </div>
+            </div>
+
+            {/* Elapsed Timer Badge */}
+            <div className="flex items-center gap-2 self-start sm:self-center">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900/80 text-blue-800 dark:text-blue-200 font-mono text-xs font-bold border border-blue-200 dark:border-blue-700">
+                <Clock size={13} className="animate-spin text-blue-600 dark:text-blue-300" style={{ animationDuration: '4s' }} />
+                <span>{t('userQuotaChecker.waitingElapsed', { seconds: elapsedSeconds })}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Animated Progress Track */}
+          <div className="relative h-2 w-full bg-blue-100/70 dark:bg-gray-800 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500 rounded-full transition-all duration-1000 ease-out"
+              style={{
+                width: `${Math.min(96, Math.max(15, Math.round((elapsedSeconds / 60) * 85) + 12))}%`
+              }}
+            />
+          </div>
+
+          {/* 3-Step Execution Stepper */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+            {/* Step 1: Proxy Connection */}
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-white/80 dark:bg-gray-850/70 border border-blue-100 dark:border-gray-800 text-xs">
+              <CheckCircle2 size={15} className="text-emerald-500 shrink-0" />
+              <span className="text-gray-700 dark:text-gray-300 font-medium line-clamp-1">
+                {t('userQuotaChecker.waitingStep1')}
+              </span>
+            </div>
+
+            {/* Step 2: GPU Queue (Active wait) */}
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-blue-50/80 dark:bg-blue-950/50 border border-blue-300 dark:border-blue-800 text-xs shadow-2xs">
+              <Loader2 size={15} className="animate-spin text-blue-600 dark:text-blue-400 shrink-0" />
+              <span className="text-blue-900 dark:text-blue-200 font-semibold line-clamp-1">
+                {t('userQuotaChecker.waitingStep2')}
+              </span>
+            </div>
+
+            {/* Step 3: Header Parsing */}
+            <div className="flex items-center gap-2 p-2.5 rounded-lg bg-white/40 dark:bg-gray-850/30 border border-gray-200 dark:border-gray-800/60 text-xs opacity-60">
+              <CircleDot size={15} className="text-gray-400 shrink-0" />
+              <span className="text-gray-500 dark:text-gray-400 font-medium line-clamp-1">
+                {t('userQuotaChecker.waitingStep3')}
+              </span>
+            </div>
+          </div>
+
+          {/* Reassurance Callout (>15 seconds) */}
+          {elapsedSeconds >= 15 && (
+            <div className="p-3 rounded-lg bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50 text-[11.5px] text-amber-900 dark:text-amber-200 flex items-center justify-between gap-2.5 animate-in fade-in duration-300">
+              <div className="flex items-center gap-2">
+                <Info size={15} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>{t('userQuotaChecker.waitingReassurance')}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer shrink-0 ml-2"
+              >
+                {t('userQuotaChecker.cancelBtn')}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SKELETON PREVIEW CARDS (When Loading) */}
+      {/* ========================================================================= */}
+      {loading && (
+        <div className="mt-4 space-y-2 animate-in fade-in duration-300">
+          <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500 px-1 font-medium">
+            <span>{t('userQuotaChecker.skeletonTitle')}</span>
+            <span className="font-mono text-[11px] animate-pulse">Calculating telemetry...</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Concurrency Skeleton */}
+            <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-850/40 animate-pulse space-y-3">
+              <div className="flex justify-between items-center">
+                <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded-sm" />
+                <div className="h-3 w-12 bg-gray-200 dark:bg-gray-700 rounded-sm" />
+              </div>
+              <div className="h-7 w-24 bg-gray-200 dark:bg-gray-700 rounded-sm" />
+              <div className="grid grid-cols-3 gap-1.5 pt-1">
+                <div className="h-2 bg-gray-300 dark:bg-gray-600 rounded-xs" />
+                <div className="h-2 bg-gray-300 dark:bg-gray-600 rounded-xs" />
+                <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-xs" />
+              </div>
+            </div>
+
+            {/* Token TPM Skeleton */}
+            <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-850/40 animate-pulse space-y-3">
+              <div className="flex justify-between items-center">
+                <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded-sm" />
+                <div className="h-3 w-12 bg-gray-200 dark:bg-gray-700 rounded-sm" />
+              </div>
+              <div className="h-7 w-28 bg-gray-200 dark:bg-gray-700 rounded-sm" />
+              <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full" />
+            </div>
+
+            {/* Budget Skeleton */}
+            <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-850/40 animate-pulse space-y-3">
+              <div className="flex justify-between items-center">
+                <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded-sm" />
+                <div className="h-3 w-12 bg-gray-200 dark:bg-gray-700 rounded-sm" />
+              </div>
+              <div className="h-7 w-20 bg-gray-200 dark:bg-gray-700 rounded-sm" />
+              <div className="h-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full" />
+            </div>
           </div>
         </div>
       )}

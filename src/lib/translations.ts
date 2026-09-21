@@ -152,6 +152,21 @@ export interface Translations {
     errorPrefix: string;
     cooldownBtn: string;
     rateLimitWarning: string;
+    expectationNotice: string;
+    cancelBtn: string;
+    cancelledNotice: string;
+    timeoutError: string;
+    waitingTitle: string;
+    waitingElapsed: string;
+    waitingStep1: string;
+    waitingStep2: string;
+    waitingStep3: string;
+    waitingMsgPhase1: string;
+    waitingMsgPhase2: string;
+    waitingMsgPhase3: string;
+    waitingMsgPhase4: string;
+    waitingReassurance: string;
+    skeletonTitle: string;
   };
   faq: {
     title: string;
@@ -488,6 +503,21 @@ export const translations: Record<Language, Translations> = {
       errorPrefix: 'เกิดข้อผิดพลาด:',
       cooldownBtn: 'รออีก {seconds} วินาที',
       rateLimitWarning: 'คุณตรวจสอบถี่เกินไป (สูงสุด 10 ครั้ง/นาที) เพื่อความปลอดภัยของระบบ กรุณารอสักครู่แล้วลองใหม่',
+      expectationNotice: 'หมายเหตุ: การดึงตัวเลขโควตาต้องผ่านคิวประมวลผลของโมเดล AI จริง 1 Token หากคิว GPU หนาแน่นอาจใช้เวลา 10–60 วินาที',
+      cancelBtn: 'ยกเลิกการตรวจ',
+      cancelledNotice: 'ยกเลิกการตรวจสอบเรียบร้อยแล้ว',
+      timeoutError: 'การตรวจสอบหมดเวลา (เกิน 75 วินาที) เนื่องจากคิว GPU ของ 9ARM Gateway หนาแน่นมาก กรุณาลองใหม่ในอีกสักครู่',
+      waitingTitle: 'กำลังดึงข้อมูลโควตาส่วนบุคคลจาก 9ARM Gateway',
+      waitingElapsed: 'ผ่านไปแล้ว {seconds} วินาที',
+      waitingStep1: 'เชื่อมต่อ Zero-Knowledge Proxy',
+      waitingStep2: 'รอคิวประมวลผล GPU Cluster (Qwen 3.8 27B)',
+      waitingStep3: 'อ่าน Telemetry: Concurrency, TPM และวงเงินสะสม',
+      waitingMsgPhase1: 'กำลังส่งคำขอ 1 Token เพื่ออ่าน HTTP Response Headers...',
+      waitingMsgPhase2: 'เข้าสู่คิว vLLM Continuous Batching Scheduler บน GPU...',
+      waitingMsgPhase3: 'คิวประมวลผลของชุมชนกำลังหนาแน่น ระบบยังคงเชื่อมต่ออยู่ตามปกติ...',
+      waitingMsgPhase4: 'กำลังจัดสรรสล็อตประมวลผล 1 Token (ระบบไม่ได้ค้าง อดใจรอสักครู่นะครับ)...',
+      waitingReassurance: 'ระบบกำลังทำงานอยู่ ไม่ต้องรีเฟรชหน้าจอ',
+      skeletonTitle: 'กำลังเตรียมพื้นที่รายงานผลโควตา...',
     },
     faq: {
       title: 'คำถามที่พบบ่อยเกี่ยวกับโควตา & Rate Limit (FAQ)',
@@ -822,6 +852,21 @@ export const translations: Record<Language, Translations> = {
       errorPrefix: 'Error:',
       cooldownBtn: 'Wait {seconds}s',
       rateLimitWarning: 'Rate limit reached: Maximum 10 checks per minute per IP. Please wait before retrying.',
+      expectationNotice: 'Notice: Fetching quota headers requires a 1-token probe through the live AI model. During high GPU traffic, it may take 10–60 seconds.',
+      cancelBtn: 'Cancel Check',
+      cancelledNotice: 'Check cancelled by user',
+      timeoutError: 'Quota check timed out (>75s) due to heavy GPU inference queue on 9ARM Gateway. Please try again shortly.',
+      waitingTitle: 'Fetching Personal Quota Telemetry from 9ARM Gateway',
+      waitingElapsed: '{seconds}s elapsed',
+      waitingStep1: 'Connected to Zero-Knowledge Proxy',
+      waitingStep2: 'Queued on GPU Cluster (Qwen 3.8 27B)',
+      waitingStep3: 'Parsing Telemetry: Concurrency, TPM & Key Budget',
+      waitingMsgPhase1: 'Dispatching 1-token probe to extract HTTP Response Headers...',
+      waitingMsgPhase2: 'Enqueued into vLLM Continuous Batching Scheduler on GPU...',
+      waitingMsgPhase3: 'Community inference queue is currently busy. Connection is active...',
+      waitingMsgPhase4: 'Allocating GPU generation slot for 1 token (system is NOT frozen, almost there)...',
+      waitingReassurance: 'Actively waiting for GPU response — please do not refresh the page.',
+      skeletonTitle: 'Preparing Quota Telemetry cards...',
     },
     faq: {
       title: 'Frequently Asked Questions (FAQ)',
