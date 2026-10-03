@@ -1,7 +1,12 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 export type StatusClassification = 'operational' | 'rate_limited' | 'quota_exhausted' | 'degraded' | 'outage';
+
+export interface OpenIncident {
+  id: string;
+  name: string;
+  message: string;
+}
 
 export interface CheckResult {
   status: number;
@@ -24,7 +29,7 @@ interface TargetCheck {
   check: (apiKey: string) => Promise<CheckResult>;
 }
 
-function parseNumberHeader(res: Response, headerName: string): number | null {
+function _parseNumberHeader(res: Response, headerName: string): number | null {
   const val = res.headers.get(headerName);
   if (!val) return null;
   const num = parseFloat(val);
@@ -35,125 +40,81 @@ const TARGETS: TargetCheck[] = [
   {
     id: 'gateway-http',
     name: 'API Gateway (HTTP / Models)',
-    maxHealthyMs: 1500, // Gateway proxy & model list should respond under 1.5s
-    check: async (apiKey: string): Promise<CheckResult> => {
-      const res = await fetch("https://gateway.9arm.co/v1/models", {
-        method: "GET",
-        headers: {
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-        },
-      });
+    maxHealthyMs: 1500, // Gateway proxy & health readiness should respond under 1.5s
+    check: async (_apiKey: string): Promise<CheckResult> => {
+      try {
+        // LiteLLM exposes /health/readiness publicly without auth, checking Caddy, LiteLLM, and DB
+        const res = await fetch("https://gateway.9arm.co/health/readiness", {
+          method: "GET",
+          headers: {
+            "User-Agent": "OpenStatusPage-HealthCheck/1.0",
+          },
+        });
 
-      const ok = res.status >= 200 && res.status < 300;
-      let statusType: StatusClassification = ok ? 'operational' : 'outage';
-      if (res.status === 429) statusType = 'rate_limited';
+        if (res.status === 200) {
+          const json = await res.json().catch(() => null);
+          const isHealthy = json?.status === 'healthy';
+          return {
+            status: 200,
+            ok: isHealthy,
+            statusType: isHealthy ? 'operational' : 'degraded',
+            errorMessage: isHealthy ? null : `Readiness status: ${json?.status ?? 'degraded'}`,
+          };
+        }
 
-      return {
-        status: res.status,
-        ok,
-        statusType,
-      };
+        // Fallback check: probe /v1/models without key
+        const fallbackRes = await fetch("https://gateway.9arm.co/v1/models", {
+          method: "GET",
+          headers: {
+            "anthropic-version": "2023-06-01",
+          },
+        });
+
+        // 401 with 'No api key passed in' or 'auth_error' means Caddy & LiteLLM are actively running
+        if (fallbackRes.status === 401 || (fallbackRes.status >= 200 && fallbackRes.status < 300)) {
+          return {
+            status: 200, // Normalize to 200 for health reporting
+            ok: true,
+            statusType: 'operational',
+          };
+        }
+
+        const isHardOutage = fallbackRes.status >= 500 || fallbackRes.status === 0;
+        return {
+          status: fallbackRes.status,
+          ok: false,
+          statusType: isHardOutage ? 'outage' : 'degraded',
+          errorMessage: `Gateway HTTP returned status ${fallbackRes.status}`,
+        };
+      } catch (err: unknown) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        return {
+          status: 0,
+          ok: false,
+          statusType: 'outage',
+          errorType: 'network_error',
+          errorMessage: errorMsg,
+        };
+      }
     },
   },
-  // Qwen 3.8 27B (BF16) is temporarily disabled per 9arm testing conclusion announcement (at 09:00 today)
-  // Ref: https://discord.com/channels/826099393694400574/1512469795218653417/1541558041692872745
-  // Uncomment when BF16 model testing resumes:
+  // Qwen 3.8 27B (BF16) is temporarily disabled per 9arm testing conclusion announcement
   // {
   //   id: 'model-qwen-bf16',
   //   name: 'Model: Qwen 3.8 27B (BF16)',
   //   maxHealthyMs: 4000,
   //   check: async (apiKey: string) => { ... }
   // },
-  {
-    id: 'model-qwen-fp8',
-    name: 'Model: Qwen 3.8 27B (FP8)',
-    maxHealthyMs: 3500, // FP8 128k context LLM inference
-    check: async (apiKey: string): Promise<CheckResult> => {
-      const res = await fetch("https://gateway.9arm.co/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "qwen3.8-27b-fp8",
-          messages: [{ role: "user", content: "hi" }],
-          max_tokens: 1,
-        }),
-      });
-
-      // Extract Rate Limit, Quota, and Concurrency Telemetry from Headers
-      const remainingTokens = parseNumberHeader(res, 'x-ratelimit-api_key-remaining-tokens')
-        ?? parseNumberHeader(res, 'anthropic-ratelimit-tokens-remaining');
-      const tokenLimit = parseNumberHeader(res, 'x-ratelimit-api_key-limit-tokens')
-        ?? parseNumberHeader(res, 'anthropic-ratelimit-tokens-limit')
-        ?? parseNumberHeader(res, 'x-litellm-key-tpm-limit');
-      const maxParallel = parseNumberHeader(res, 'x-ratelimit-api_key-limit-max_parallel_requests');
-      const remainingParallel = parseNumberHeader(res, 'x-ratelimit-api_key-remaining-max_parallel_requests');
-      const keySpend = parseNumberHeader(res, 'x-litellm-key-spend');
-      const keyMaxBudget = parseNumberHeader(res, 'x-litellm-key-max-budget');
-
-      let errorType: string | null = null;
-      let errorMessage: string | null = null;
-
-      if (res.status >= 400) {
-        try {
-          const errJson = await res.json();
-          if (errJson?.error) {
-            errorType = errJson.error.type || null;
-            errorMessage = errJson.error.message || null;
-          }
-        } catch {
-          // ignore json parse error
-        }
-      }
-
-      // Precise Status Classification
-      let ok = false;
-      let statusType: StatusClassification = 'outage';
-
-      if (res.status >= 200 && res.status < 300) {
-        ok = true;
-        statusType = 'operational';
-      } else if (res.status === 429) {
-        ok = false;
-        statusType = 'rate_limited';
-        errorType = errorType || 'rate_limit_error';
-        errorMessage = errorMessage || 'Usage / Rate limit reached (HTTP 429)';
-      } else if (res.status === 400 || res.status === 402) {
-        const isBudget = errorType?.includes('budget') || errorMessage?.toLowerCase().includes('budget') || errorMessage?.toLowerCase().includes('quota');
-        if (isBudget) {
-          ok = false;
-          statusType = 'quota_exhausted';
-        } else {
-          ok = false;
-          statusType = 'outage';
-        }
-      } else {
-        ok = false;
-        statusType = 'outage';
-      }
-
-      return {
-        status: res.status,
-        ok,
-        statusType,
-        remainingTokens,
-        tokenLimit,
-        maxParallelRequests: maxParallel,
-        remainingParallelRequests: remainingParallel,
-        keySpend,
-        keyMaxBudget,
-        errorType,
-        errorMessage,
-      };
-    },
-  },
-  // DeepSeek is temporarily disabled per 9arm announcement ("Deepseek will be disabled NOW... will return soon")
-  // Ref: https://discord.com/channels/826099393694400574/1512469795218653417/1540781941148622928
-  // Uncomment when DeepSeek is restored
+  // Qwen 3.8 27B (FP8) automated probe paused (switched to zero-cost Gateway HTTP & DB Health mode)
+  // Uncomment when an active probe API key is available:
+  // {
+  //   id: 'model-qwen-fp8',
+  //   name: 'Model: Qwen 3.8 27B (FP8)',
+  //   maxHealthyMs: 3500, // FP8 128k context LLM inference
+  //   check: async (apiKey: string): Promise<CheckResult> => { ... }
+  // },
+  // DeepSeek is temporarily disabled per 9arm announcement
+  // { id: 'model-deepseek', name: 'Model: DeepSeek v4 Flash' }
 ];
 
 function formatThaiDateTime(date = new Date()): string {
@@ -189,7 +150,7 @@ async function sendTelegramAlert(botToken: string, chatId: string, htmlMessage: 
   }
 }
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*' } });
   }
@@ -230,8 +191,9 @@ serve(async (req) => {
           error_type: checkRes.errorType ?? null,
           error_message: checkRes.errorMessage ?? null,
         };
-      } catch (err: any) {
+      } catch (err: unknown) {
         const responseTimeMs = Date.now() - startTime;
+        const errorMsg = err instanceof Error ? err.message : String(err);
         return {
           endpoint: target.name,
           max_healthy_ms: target.maxHealthyMs,
@@ -246,7 +208,7 @@ serve(async (req) => {
           key_spend: null,
           key_max_budget: null,
           error_type: 'network_error',
-          error_message: err.message,
+          error_message: errorMsg,
         };
       }
     })
@@ -294,10 +256,12 @@ serve(async (req) => {
 
   try {
     // 1. Fetch current open incidents
-    const { data: openIncidents } = await supabase
+    const { data: openIncidentsRaw } = await supabase
       .from('incidents')
       .select('id, name, message')
       .is('resolved_at', null);
+
+    const openIncidents: OpenIncident[] = (openIncidentsRaw ?? []) as OpenIncident[];
 
     // 2. Identify different alert conditions:
     // a) Rate / Usage Limit Throttling (HTTP 429 or quota_exhausted)
@@ -315,8 +279,8 @@ serve(async (req) => {
 
     // Auto-create incident for Rate / Usage Limits (HTTP 429)
     for (const rl of rateLimitedTargets) {
-      const alreadyOpen = openIncidents?.some(
-        i => i.name.toLowerCase().includes(rl.endpoint.toLowerCase()) && (i.name.toLowerCase().includes('usage') || i.name.toLowerCase().includes('rate limit'))
+      const alreadyOpen = openIncidents.some(
+        (i: OpenIncident) => i.name.toLowerCase().includes(rl.endpoint.toLowerCase()) && (i.name.toLowerCase().includes('usage') || i.name.toLowerCase().includes('rate limit'))
       );
       if (!alreadyOpen) {
         const incidentName = `Usage Limit Throttled: ${rl.endpoint}`;
@@ -352,8 +316,8 @@ serve(async (req) => {
 
     // Auto-create incident for hard outages if not already open
     for (const o of outageTargets) {
-      const alreadyOpen = openIncidents?.some(
-        i => i.name.toLowerCase().includes(o.endpoint.toLowerCase()) && !i.name.toLowerCase().includes('usage limit')
+      const alreadyOpen = openIncidents.some(
+        (i: OpenIncident) => i.name.toLowerCase().includes(o.endpoint.toLowerCase()) && !i.name.toLowerCase().includes('usage limit')
       );
       if (!alreadyOpen) {
         const incidentName = `Service Outage: ${o.endpoint}`;
@@ -381,8 +345,8 @@ serve(async (req) => {
 
     // Auto-create incident for severe latency (> 2x normal threshold, e.g. > 7s on LLM)
     for (const d of severeLatencyTargets) {
-      const alreadyOpen = openIncidents?.some(
-        i => i.name.toLowerCase().includes(d.endpoint.toLowerCase()) && i.name.toLowerCase().includes('latency')
+      const alreadyOpen = openIncidents.some(
+        (i: OpenIncident) => i.name.toLowerCase().includes(d.endpoint.toLowerCase()) && i.name.toLowerCase().includes('latency')
       );
       if (!alreadyOpen) {
         const incidentName = `Elevated Latency: ${d.endpoint}`;

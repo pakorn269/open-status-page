@@ -19,6 +19,16 @@ export interface ChangeEvent {
 
 export const SYSTEM_CHANGES: ChangeEvent[] = [
   {
+    id: 'gateway-http-readiness-mode',
+    date: '2026-10-03T22:20:00+07:00',
+    category: 'notice',
+    isPinned: true,
+    titleEn: 'Transitioned to Gateway HTTP & DB Readiness Health Monitoring',
+    titleTh: 'ปรับระบบตรวจสอบสถานะเป็นโหมด Gateway HTTP & Database Readiness',
+    descEn: 'Health checks have transitioned to monitoring the LiteLLM gateway, Caddy reverse proxy, and database connectivity directly via public /health/readiness (HTTP 200). Automated model inference probes are paused to prevent false downtime alarms.',
+    descTh: 'ระบบได้ปรับเปลี่ยนการตรวจสอบสถานะมาเป็นการวัดความพร้อมของ Caddy Reverse Proxy, LiteLLM Gateway และการเชื่อมต่อฐานข้อมูลโดยตรงผ่าน /health/readiness (HTTP 200) เพื่อความแม่นยำ โดยหยุดการยิงทดสอบ Inference โมเดลชั่วคราวเพื่อป้องกันการแจ้งเตือนขัดข้องผิดพลาด',
+  },
+  {
     id: 'personal-quota-checker-launch',
     date: '2026-09-21T13:30:00+07:00',
     category: 'feature',
